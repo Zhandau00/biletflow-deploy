@@ -1,0 +1,54 @@
+import uuid
+from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+
+from app.core.i18n import Language
+
+
+def _clean_full_name(value: str) -> str:
+    value = value.strip()
+    clean_name = value.replace(" ", "").replace("-", "").replace("'", "")
+    if not clean_name.isalpha():
+        raise ValueError("Full name must contain only alphabetic characters.")
+    return value
+
+
+class UserBase(BaseModel):
+    email: EmailStr = Field(..., max_length=255)
+    full_name: str = Field(..., min_length=2, max_length=100)
+
+    @field_validator("full_name")
+    @classmethod
+    def validate_full_name(cls, value: str) -> str:
+        return _clean_full_name(value)
+
+
+class UserCreate(UserBase):
+    password: str = Field(..., min_length=8, max_length=128)
+    # The frontend sends its interface language: kk, ru or en
+    preferred_language: Language = "en"
+
+
+class UserUpdate(BaseModel):
+    full_name: str | None = Field(None, min_length=2, max_length=100)
+    preferred_language: Language | None = None
+
+    @field_validator("full_name")
+    @classmethod
+    def validate_full_name(cls, value: str | None) -> str | None:
+        return None if value is None else _clean_full_name(value)
+
+
+class UserResponse(BaseModel):
+    """Output only. No input rules here, so old rows can never break a response."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    email: str
+    full_name: str
+    created_at: datetime
+    is_email_verified: bool = False
+    is_platform_admin: bool = False
+    preferred_language: str = "en"
