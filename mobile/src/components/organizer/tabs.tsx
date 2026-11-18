@@ -1,0 +1,961 @@
+/** The tabs of an event's workspace (organizer/[id].tsx shows them). */
+import { useState } from "react";
+import { Pressable, View } from "react-native";
+import { Image } from "expo-image";
+import * as Clipboard from "expo-clipboard";
+import * as ImagePicker from "expo-image-picker";
+import { router } from "expo-router";
+import { api } from "@/lib/api";
+import { eventTime, mediaUrl, posterInfo, price, type TicketType } from "@/lib/events";
+import type { Order } from "@/lib/orders";
+import {
+  ROLE_LABELS,
+  fromLocalInputs,
+  toLocalInputs,
+  type Activation,
+  type ActivityEntry,
+  type Analytics,
+  type Attendee,
+  type Campaign,
+  type CheckInStats,
+  type SalesSummary,
+  type StaffMember,
+  type StaffRole,
+  type TicketStats,
+  type TicketTypeStats,
+  type VenueLayout,
+} from "@/lib/organizer";
+import { Poster } from "../poster";
+import { shareCsv, shareFile } from "../files";
+import { amount, ref } from "../format";
+import { failure, useLoad } from "../use-load";
+import { Avatar, Badge, Button, Card, Chips, Empty, Eyebrow, Field, H2, Icon, Loaded, Notice, Progress, Row, Select, Stat, T, Toggle } from "../ui";
+import { color } from "../theme";
+import { DateTimeFields, validDate, validTime, when, type EventContext } from "./shared";
+
+/* ------------------------------ Overview ------------------------------ */
+
+export function OverviewTab({ ctx }: { ctx: EventContext }) {
+  const { event } = ctx;
+  const data = useLoad(`overview:${event.id}:${event.status}:${event.cover_image_url}`, async (signal) => {
+    const [stats, sales, checkin, activation, staff] = await Promise.all([
+      api.request<TicketStats>(`/events/${event.id}/ticket-stats`, { signal }),
+      api.request<SalesSummary>(`/events/${event.id}/sales`, { signal }),
+      api.request<CheckInStats>(`/events/${event.id}/check-in/stats`, { signal }),
+      api.request<Activation>(`/events/${event.id}/activation`, { signal }).catch(() => null),
+      api.request<StaffMember[]>(`/events/${event.id}/staff`, { signal }).catch(() => [] as StaffMember[]),
+    ]);
+    return { stats, sales, checkin, activation, staff };
+  });
+  return (
+    <Loaded data={data}>
+      {({ stats, sales, checkin, activation, staff }) => {
+        const paid = stats.ticket_types.some((t) => t.price_kzt > 0);
+        const checklist: [string, string, boolean][] = [
+          ["The event details", "A name, a date, and a place to be.", !!event.venue_name],
+          ["Your ticket types", `${stats.ticket_types.length} ${stats.ticket_types.length === 1 ? "way" : "ways"} to join.`, stats.ticket_types.length > 0],
+          ["Published", "Let people discover your event.", event.status === "published"],
+          ...(paid ? ([["Paid sales open", "Finish the activation checklist under Paid sales.", event.paid_sales_open]] as [string, string, boolean][]) : []),
+          ["A team at the door", "Add check-in staff under Team.", staff.some((s) => s.role !== "owner")],
+        ];
+        return (
+          <View style={{ gap: 12 }}>
+            <Row>
+              <Stat label="Gross sales" value={amount(sales.gross_sales_kzt)} note={`Estimated payout ${amount(sales.estimated_payout_kzt)} (simulated)`} icon="stats-chart" />
+              <Stat label="Tickets sold" value={`${stats.totals.sold} / ${stats.totals.quantity}`} note={`${stats.totals.available} available · ${stats.totals.reserved} in checkouts`} icon="ticket-outline" />
+              <Stat label="Through the door" value={checkin.checked_in} note={`${checkin.remaining} guests still to arrive`} icon="people-outline" />
+            </Row>
+            <Poster event={posterInfo(event)} />
+            <T small muted>
+              {[event.venue_name, event.city].filter(Boolean).join(" · ")} · {event.visibility}
+            </T>
+            <ImagesEditor ctx={ctx} />
+            <Card>
+              <H2>Before the doors open</H2>
+              <T muted small>
+                {activation?.status === "suspended" ? `Paid sales were suspended by the platform: ${activation.suspension_reason ?? "no reason given"}.` : "A few things to have in place."}
+              </T>
+              {checklist.map(([title, description, done]) => (
+                <Row key={title} wrap={false} style={{ alignItems: "flex-start" }}>
+                  <Icon name={done ? "checkmark-circle" : "ellipse-outline"} tint={done ? color.ok : color.muted} />
+                  <View style={{ flex: 1 }}>
+                    <T bold>{title}</T>
+                    <T small muted>{description}</T>
+                  </View>
+                </Row>
+              ))}
+            </Card>
+          </View>
+        );
+      }}
+    </Loaded>
+  );
+}
+
+function ImagesEditor({ ctx }: { ctx: EventContext }) {
+  const { event } = ctx;
+  const [version, setVersion] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const images = useLoad(`images:${event.id}:${version}`, (signal) => api.request<{ id: string; url: string }[]>(`/events/${event.id}/images`, { signal }));
+  async function pick() {
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.85 });
+    const asset = result.canceled ? null : result.assets[0];
+    if (!asset) return;
+    const type = asset.mimeType ?? "image/jpeg";
+    if (!["image/jpeg", "image/png", "image/webp"].includes(type)) return ctx.notify("Choose a JPEG, PNG or WebP image.", true);
+    const form = new FormData();
+    const name = asset.fileName ?? `image.${type.split("/")[1]}`;
+    if (asset.file) form.append("file", asset.file, name);
+    // React Native sends a file from its uri
+    else form.append("file", { uri: asset.uri, name, type } as unknown as Blob);
+    setBusy(true);
+    try {
+      await api.request(`/events/${event.id}/images`, { method: "POST", form });
+      ctx.reload();
+      setVersion((v) => v + 1);
+      ctx.notify("Image added. The first image is the cover.");
+    } catch (e) {
+      ctx.notify(failure(e, "Could not upload the image."), true);
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function remove(id: string) {
+    try {
+      await api.request(`/events/${event.id}/images/${id}`, { method: "DELETE" });
+      ctx.reload();
+      setVersion((v) => v + 1);
+    } catch (e) {
+      ctx.notify(failure(e), true);
+    }
+  }
+  return (
+    <Card>
+      <H2>Images</H2>
+      <Row>
+        {images.data?.map((image) => (
+          <View key={image.id}>
+            <Image source={{ uri: mediaUrl(image.url) ?? undefined }} style={{ width: 92, height: 92, borderRadius: 10, backgroundColor: color.ink700 }} contentFit="cover" />
+            <Pressable
+              onPress={() => remove(image.id)}
+              accessibilityLabel="Remove image"
+              style={{ position: "absolute", top: 4, right: 4, backgroundColor: color.ink, borderRadius: 12, padding: 2 }}
+            >
+              <Icon name="close" size={16} />
+            </Pressable>
+          </View>
+        ))}
+      </Row>
+      <Button small kind="secondary" icon="add" label={busy ? "Uploading…" : "Add an image"} busy={busy} onPress={pick} style={{ alignSelf: "flex-start" }} />
+      <T small muted>JPEG, PNG or WebP, up to 5 MB, 10 per event. Uploads on the free hosting may not last; see DEPLOY.md.</T>
+    </Card>
+  );
+}
+
+/* ------------------------------ Tickets ------------------------------ */
+
+export function TicketsTab({ ctx, seating }: { ctx: EventContext; seating?: boolean }) {
+  const { event } = ctx;
+  const [version, setVersion] = useState(0);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [wantSeats, setWantSeats] = useState(!!seating);
+  const stats = useLoad(`ticket-stats:${event.id}:${version}`, (signal) => api.request<TicketStats>(`/events/${event.id}/ticket-stats`, { signal }));
+  const refresh = () => setVersion((v) => v + 1);
+  const canSwitch = (stats.data?.ticket_types.length ?? 0) === 0 && (event.status === "draft" || event.status === "published");
+  if (event.seating_type === "assigned" || (wantSeats && canSwitch))
+    return (
+      <SeatingSetup ctx={ctx} stats={stats.data} onDone={refresh} onCancel={event.seating_type === "assigned" ? undefined : () => setWantSeats(false)} />
+    );
+  return (
+    <Loaded data={stats}>
+      {(s) => (
+        <View style={{ gap: 12 }}>
+          {s.ticket_types.map((t) =>
+            editing === t.id ? (
+              <TicketTypeForm key={t.id} ctx={ctx} existing={t} onDone={() => { setEditing(null); refresh(); }} />
+            ) : (
+              <Card key={t.id}>
+                <Row style={{ justifyContent: "space-between" }}>
+                  <H2>{t.name}</H2>
+                  <T bold>{price(t.price_kzt)}</T>
+                </Row>
+                {t.is_hidden && <Badge label="Hidden" />}
+                <T small muted>
+                  {t.description ?? ""}
+                  {t.sale_start ? ` · on sale from ${when(t.sale_start, event)}` : ""}
+                  {t.sale_end ? ` · until ${when(t.sale_end, event)}` : ""}
+                  {` · up to ${t.max_per_order} per order`}
+                </T>
+                <T small>
+                  {t.sold} sold · {t.reserved} held · {t.available} left of {t.quantity}
+                </T>
+                <Button small kind="secondary" label="Edit" onPress={() => setEditing(t.id)} style={{ alignSelf: "flex-start" }} />
+              </Card>
+            ),
+          )}
+          <T muted>
+            {s.totals.quantity} of {s.capacity} places assigned to ticket types.
+          </T>
+          {editing === "new" ? (
+            <TicketTypeForm ctx={ctx} onDone={() => { setEditing(null); refresh(); }} />
+          ) : (
+            <>
+              <Button kind="secondary" icon="add" label="Add ticket type" onPress={() => setEditing("new")} />
+              {canSwitch && <Button kind="secondary" label="Use numbered seats instead" onPress={() => setWantSeats(true)} />}
+            </>
+          )}
+        </View>
+      )}
+    </Loaded>
+  );
+}
+
+function TicketTypeForm({ ctx, existing, onDone }: { ctx: EventContext; existing?: TicketTypeStats; onDone: () => void }) {
+  const { event } = ctx;
+  const start = toLocalInputs(existing?.sale_start);
+  const end = toLocalInputs(existing?.sale_end);
+  const [name, setName] = useState(existing?.name ?? "");
+  const [description, setDescription] = useState(existing?.description ?? "");
+  const [priceText, setPrice] = useState(String(existing?.price_kzt ?? 0));
+  const [quantity, setQuantity] = useState(String(existing?.quantity ?? 50));
+  const [maxPer, setMaxPer] = useState(String(existing?.max_per_order ?? 10));
+  const [startDate, setStartDate] = useState(start.date);
+  const [startTime, setStartTime] = useState(start.time);
+  const [endDate, setEndDate] = useState(end.date);
+  const [endTime, setEndTime] = useState(end.time);
+  const [hidden, setHidden] = useState(!!existing?.is_hidden);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  async function submit() {
+    setError("");
+    if ((startDate && !validDate(startDate)) || (endDate && !validDate(endDate)) || (startTime && !validTime(startTime)) || (endTime && !validTime(endTime)))
+      return setError("Check the sale dates (2026-12-31) and times (19:30).");
+    const body = {
+      name: name.trim(),
+      description: description.trim() || null,
+      price_kzt: Number(priceText),
+      quantity: Number(quantity),
+      max_per_order: Number(maxPer),
+      sale_start: fromLocalInputs(startDate, startTime || "00:00"),
+      sale_end: fromLocalInputs(endDate, endTime || "23:59"),
+      is_hidden: hidden,
+    };
+    setBusy(true);
+    try {
+      if (existing) await api.request(`/ticket-types/${existing.id}`, { method: "PATCH", body });
+      else await api.request(`/events/${event.id}/ticket-types`, { body });
+      ctx.notify(existing ? "Ticket type saved." : "Ticket type added.");
+      onDone();
+    } catch (e) {
+      setError(failure(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function remove() {
+    if (!existing) return;
+    setBusy(true);
+    try {
+      await api.request(`/ticket-types/${existing.id}`, { method: "DELETE" });
+      ctx.notify("Ticket type removed.");
+      onDone();
+    } catch (e) {
+      setError(failure(e));
+      setBusy(false);
+    }
+  }
+  return (
+    <Card>
+      <H2>{existing ? "Edit ticket type" : "New ticket type"}</H2>
+      <Field label="Ticket name" value={name} onChangeText={setName} maxLength={100} />
+      <Field label="What’s included" optional value={description} onChangeText={setDescription} maxLength={500} />
+      <Row wrap={false}>
+        <View style={{ flex: 1 }}>
+          <Field label="Price · KZT" value={priceText} onChangeText={setPrice} keyboardType="number-pad" hint={existing && existing.sold > 0 ? "Orders already placed keep their price" : undefined} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Field label="Quantity" value={quantity} onChangeText={setQuantity} keyboardType="number-pad" />
+        </View>
+      </Row>
+      <DateTimeFields label="Sales start" optional date={startDate} time={startTime} onDate={setStartDate} onTime={setStartTime} />
+      <DateTimeFields label="Sales end" optional date={endDate} time={endTime} onDate={setEndDate} onTime={setEndTime} />
+      <Field label="Most per order" value={maxPer} onChangeText={setMaxPer} keyboardType="number-pad" />
+      <Toggle label="Hidden" hint="For guest lists and comps" value={hidden} onChange={setHidden} />
+      {error ? <Notice error>{error}</Notice> : null}
+      <Row>
+        <Button label="Save ticket type" busy={busy} disabled={name.trim().length < 2} onPress={submit} />
+        <Button kind="secondary" label="Cancel" onPress={onDone} />
+        {existing && existing.sold + existing.reserved === 0 && <Button kind="danger" label="Remove" disabled={busy} onPress={remove} />}
+      </Row>
+    </Card>
+  );
+}
+
+function SeatingSetup({ ctx, stats, onDone, onCancel }: { ctx: EventContext; stats?: TicketStats; onDone: () => void; onCancel?: () => void }) {
+  const { event } = ctx;
+  const layouts = useLoad("venue-layouts", (signal) => api.request<VenueLayout[]>("/venue-layouts", { signal }));
+  const [venue, setVenue] = useState(event.venue_layout_id ?? "");
+  const [values, setValues] = useState<Record<string, { name: string; price: string; max: string }>>({});
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const chosen = layouts.data?.find((l) => l.id === (venue || layouts.data?.[0]?.id));
+  const configured = !!event.venue_layout_id && (stats?.ticket_types.length ?? 0) > 0;
+  const value = (category: string) => {
+    const current = stats?.ticket_types.find((t) => t.seat_category === category);
+    return (
+      values[`${chosen?.id}:${category}`] ?? {
+        name: current?.name ?? `Category ${category}`,
+        price: String(current?.price_kzt ?? 5000),
+        max: String(current?.max_per_order ?? 10),
+      }
+    );
+  };
+  const set = (category: string, patch: Partial<{ name: string; price: string; max: string }>) =>
+    setValues((v) => ({ ...v, [`${chosen?.id}:${category}`]: { ...value(category), ...patch } }));
+  async function submit() {
+    if (!chosen) return;
+    const categories = Object.keys(chosen.categories).map((c) => ({
+      category: c,
+      name: value(c).name.trim(),
+      price_kzt: Number(value(c).price),
+      max_per_order: Number(value(c).max),
+    }));
+    setBusy(true);
+    setError("");
+    try {
+      await api.request(`/events/${event.id}/seating`, { body: { venue_id: chosen.id, categories } });
+      ctx.reload();
+      onDone();
+      ctx.notify("Seating saved. Each seat category is now a ticket type.");
+    } catch (e) {
+      setError(failure(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <View style={{ gap: 12 }}>
+      <H2>Numbered seats</H2>
+      <T muted>Choose the hall, then name and price each seat category. Guests pick their seats on a map.</T>
+      {configured &&
+        stats?.ticket_types.map((t) => (
+          <Card key={t.id}>
+            <Row style={{ justifyContent: "space-between" }}>
+              <T bold>{t.name}</T>
+              <T bold>{price(t.price_kzt)}</T>
+            </Row>
+            <T small muted>
+              Category {t.seat_category} · {t.sold} sold · {t.available} left of {t.quantity}
+            </T>
+          </Card>
+        ))}
+      <Loaded data={layouts}>
+        {(list) =>
+          list.length === 0 ? (
+            <Empty title="No venue layouts yet." description="A platform admin adds halls with numbered seats." />
+          ) : (
+            <Card>
+              <Select
+                label="Venue"
+                value={chosen?.id ?? ""}
+                onChange={setVenue}
+                disabled={configured && (stats?.totals.sold ?? 0) > 0}
+                options={list.map((l) => ({ value: l.id, label: `${l.name}${l.city ? `, ${l.city}` : ""} · ${l.total_seats} seats` }))}
+              />
+              {chosen &&
+                Object.entries(chosen.categories).map(([category, seats]) => (
+                  <View key={`${chosen.id}-${category}`} style={{ gap: 8, borderTopWidth: 1, borderTopColor: color.line, paddingTop: 10 }}>
+                    <T bold>
+                      Category {category} · {seats} seats
+                    </T>
+                    <Field label="Name" value={value(category).name} onChangeText={(name) => set(category, { name })} maxLength={100} />
+                    <Row wrap={false}>
+                      <View style={{ flex: 1 }}>
+                        <Field label="Price · KZT" value={value(category).price} onChangeText={(p) => set(category, { price: p })} keyboardType="number-pad" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Field label="Most per order" value={value(category).max} onChangeText={(max) => set(category, { max })} keyboardType="number-pad" />
+                      </View>
+                    </Row>
+                  </View>
+                ))}
+              {error ? <Notice error>{error}</Notice> : null}
+              <Button label={busy ? "Saving…" : configured ? "Update seating" : "Set up seating"} busy={busy} onPress={submit} />
+              {onCancel && <Button kind="secondary" label="Use general admission instead" disabled={busy} onPress={onCancel} />}
+            </Card>
+          )
+        }
+      </Loaded>
+    </View>
+  );
+}
+
+/* ------------------------------ Paid sales ------------------------------ */
+
+export function PaidSalesTab({ ctx }: { ctx: EventContext }) {
+  const { event, role } = ctx;
+  const [version, setVersion] = useState(0);
+  const [busy, setBusy] = useState("");
+  const data = useLoad(`activation:${event.id}:${version}`, (signal) => api.request<Activation>(`/events/${event.id}/activation`, { signal }));
+  async function step(kind: string, path: string, body: unknown, done: string) {
+    setBusy(kind);
+    try {
+      await api.request(`/events/${event.id}/activation/${path}`, { body });
+      setVersion((v) => v + 1);
+      if (kind === "activate") ctx.reload();
+      ctx.notify(done);
+    } catch (e) {
+      ctx.notify(failure(e), true);
+    } finally {
+      setBusy("");
+    }
+  }
+  const owner = role === "owner";
+  return (
+    <Loaded data={data}>
+      {(a) => (
+        <View style={{ gap: 12 }}>
+          <Card>
+            <Row style={{ justifyContent: "space-between" }}>
+              <Eyebrow>Box office</Eyebrow>
+              <Badge tone={a.status === "active" ? "live" : a.status === "suspended" ? "bad" : "neutral"} label={a.status} />
+            </Row>
+            <H2>Paid ticket sales</H2>
+            <T muted>
+              {a.status === "active"
+                ? "Paid sales are open. Guests can buy paid tickets (payments are simulated)."
+                : a.status === "suspended"
+                  ? `Suspended by the platform: ${a.suspension_reason ?? "no reason given"}. Contact platform support.`
+                  : "Free registration works now. Paid tickets open once every step below is done."}
+            </T>
+          </Card>
+          {a.checklist.map((entry) => (
+            <Card key={entry.item}>
+              <Row wrap={false} style={{ alignItems: "flex-start" }}>
+                <Icon name={entry.done ? "checkmark-circle" : "ellipse-outline"} tint={entry.done ? color.ok : color.muted} />
+                <View style={{ flex: 1, gap: 6 }}>
+                  <T bold>{entry.label}</T>
+                  {!entry.done && entry.item === "paid_ticket_type" && <T small muted>Add a ticket type with a price under Tickets.</T>}
+                  {!entry.done && entry.item === "identity_verified" && (
+                    <>
+                      <T small muted>Submit your legal name and IIN/BIN on your organizer profile; the platform team confirms it.</T>
+                      <Button small kind="secondary" label="Organizer profile" onPress={() => router.push("/organizer/profile")} style={{ alignSelf: "flex-start" }} />
+                    </>
+                  )}
+                  {!entry.done && entry.item === "payout_account" && (
+                    <>
+                      <T small muted>Add the bank account for payouts on your organizer profile.</T>
+                      <Button small kind="secondary" label="Organizer profile" onPress={() => router.push("/organizer/profile")} style={{ alignSelf: "flex-start" }} />
+                    </>
+                  )}
+                  {!entry.done && entry.item === "activation_fee_paid" && (
+                    <Button small kind="secondary" label={`Pay the ${amount(a.fee_kzt)} fee (simulated)`} busy={busy === "fee"} disabled={!!busy || !owner} onPress={() => step("fee", "pay-fee", { outcome: "success" }, "Activation fee paid (simulated).")} style={{ alignSelf: "flex-start" }} />
+                  )}
+                  {!entry.done && entry.item === "terms_accepted" && (
+                    <Button small kind="secondary" label={`Accept the organizer terms (${a.terms_version})`} disabled={!!busy || !owner} onPress={() => step("terms", "accept-terms", { terms_version: a.terms_version }, "Organizer terms accepted.")} style={{ alignSelf: "flex-start" }} />
+                  )}
+                </View>
+              </Row>
+            </Card>
+          ))}
+          {a.status !== "active" && <Button label="Open paid sales" busy={busy === "activate"} disabled={!a.can_activate || !!busy || !owner} onPress={() => step("activate", "activate", {}, "Paid sales are open.")} />}
+          {!owner && <T small muted>Only the event owner can pay the fee, accept the terms and open paid sales.</T>}
+        </View>
+      )}
+    </Loaded>
+  );
+}
+
+/* ------------------------------ Promotions ------------------------------ */
+
+export function PromotionsTab({ ctx }: { ctx: EventContext }) {
+  const { event } = ctx;
+  const [version, setVersion] = useState(0);
+  const [adding, setAdding] = useState(false);
+  const data = useLoad(`campaigns:${event.id}:${version}`, async (signal) => {
+    const [campaigns, types] = await Promise.all([
+      api.request<Campaign[]>(`/events/${event.id}/campaigns`, { signal }),
+      api.request<TicketType[]>(`/events/${event.id}/ticket-types`, { signal, query: { include_hidden: true } }),
+    ]);
+    return { campaigns, types };
+  });
+  async function toggle(c: Campaign) {
+    try {
+      await api.request(`/events/${event.id}/campaigns/${c.id}`, { method: "PATCH", body: { is_active: !c.is_active } });
+      setVersion((v) => v + 1);
+    } catch (e) {
+      ctx.notify(failure(e), true);
+    }
+  }
+  async function qr(c: Campaign) {
+    try {
+      await shareFile(`/events/${event.id}/campaigns/${c.id}/qr.png`, `promo-${c.code}.png`);
+    } catch (e) {
+      ctx.notify(failure(e, "Could not get the QR code."), true);
+    }
+  }
+  return (
+    <Loaded data={data}>
+      {({ campaigns, types }) => (
+        <View style={{ gap: 12 }}>
+          <H2>Promo codes and links</H2>
+          <T muted>Each campaign has a code, a shareable link and a QR code for posters.</T>
+          {adding ? (
+            <CampaignForm
+              ctx={ctx}
+              types={types}
+              onDone={(created) => {
+                setAdding(false);
+                if (created) setVersion((v) => v + 1);
+              }}
+            />
+          ) : (
+            <Button kind="secondary" icon="add" label="New campaign" onPress={() => setAdding(true)} />
+          )}
+          {campaigns.length
+            ? campaigns.map((c) => (
+                <Card key={c.id}>
+                  <Row style={{ justifyContent: "space-between" }}>
+                    <H2>{c.name}</H2>
+                    <Badge tone={c.is_active ? "live" : "neutral"} label={c.is_active ? "active" : "paused"} />
+                  </Row>
+                  <T style={{ fontFamily: "monospace" }}>{c.code}</T>
+                  <T small muted>
+                    {c.discount_label} · used {c.stats.redemptions}
+                    {c.max_redemptions ? ` / ${c.max_redemptions}` : ""} · net {amount(c.stats.net_revenue_kzt)}
+                  </T>
+                  <Row>
+                    <Button small kind="secondary" icon="copy-outline" label="Copy link" onPress={() => void Clipboard.setStringAsync(c.link_url).then(() => ctx.notify("Link copied."))} />
+                    <Button small kind="secondary" icon="qr-code-outline" label="QR code" onPress={() => qr(c)} />
+                    <Button small kind="text" label={c.is_active ? "Pause" : "Resume"} onPress={() => toggle(c)} />
+                  </Row>
+                </Card>
+              ))
+            : !adding && <Empty icon="pricetag-outline" title="No campaigns yet." description="Create a code for students, early birds or partners." />}
+        </View>
+      )}
+    </Loaded>
+  );
+}
+
+function CampaignForm({ ctx, types, onDone }: { ctx: EventContext; types: TicketType[]; onDone: (created: boolean) => void }) {
+  const { event } = ctx;
+  const [name, setName] = useState("");
+  const [code, setCode] = useState("");
+  const [kind, setKind] = useState("percent");
+  const [value, setValue] = useState("10");
+  const [uses, setUses] = useState("");
+  const [from, setFrom] = useState("");
+  const [until, setUntil] = useState("");
+  const [picked, setPicked] = useState<string[]>([]);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  async function create() {
+    setError("");
+    if ((from && !validDate(from)) || (until && !validDate(until))) return setError("Use dates like 2026-12-31.");
+    if (code && !/^[A-Za-z0-9_-]+$/.test(code)) return setError("Codes use letters, numbers, - and _ only.");
+    setBusy(true);
+    try {
+      await api.request(`/events/${event.id}/campaigns`, {
+        body: {
+          name: name.trim(),
+          code: code.trim() || null,
+          discount_type: kind,
+          discount_value: Number(value),
+          max_redemptions: uses.trim() ? Number(uses) : null,
+          starts_at: fromLocalInputs(from, "00:00"),
+          ends_at: fromLocalInputs(until, "23:59"),
+          ticket_type_ids: picked,
+        },
+      });
+      ctx.notify("Promo campaign created.");
+      onDone(true);
+    } catch (e) {
+      setError(failure(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Card>
+      <Field label="Campaign name" value={name} onChangeText={setName} maxLength={100} placeholder="Student night" />
+      <Field label="Code" optional value={code} onChangeText={(v) => setCode(v.toUpperCase())} maxLength={32} autoCapitalize="characters" placeholder="STUDENT20" hint="Leave empty to generate one." />
+      <Select label="Discount" value={kind} onChange={setKind} options={[{ value: "percent", label: "Percent off" }, { value: "fixed", label: "Tenge off per order" }]} />
+      <Row wrap={false}>
+        <View style={{ flex: 1 }}>
+          <Field label="Amount" value={value} onChangeText={setValue} keyboardType="number-pad" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Field label="Uses" optional value={uses} onChangeText={setUses} keyboardType="number-pad" />
+        </View>
+      </Row>
+      <Row wrap={false}>
+        <View style={{ flex: 1 }}>
+          <Field label="From" optional value={from} onChangeText={setFrom} placeholder="YYYY-MM-DD" maxLength={10} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Field label="Until" optional value={until} onChangeText={setUntil} placeholder="YYYY-MM-DD" maxLength={10} />
+        </View>
+      </Row>
+      <T bold>Applies to (none chosen = every ticket type)</T>
+      {types.map((t) => (
+        <Toggle
+          key={t.id}
+          label={`${t.name} · ${price(t.price_kzt)}`}
+          value={picked.includes(t.id)}
+          onChange={(on) => setPicked((p) => (on ? [...p, t.id] : p.filter((x) => x !== t.id)))}
+        />
+      ))}
+      {error ? <Notice error>{error}</Notice> : null}
+      <Row>
+        <Button label="Create campaign" busy={busy} disabled={name.trim().length < 2 || !Number(value)} onPress={create} />
+        <Button kind="secondary" label="Cancel" onPress={() => onDone(false)} />
+      </Row>
+    </Card>
+  );
+}
+
+/* ------------------------------ Attendees ------------------------------ */
+
+const TICKET_STATUS: Record<Attendee["status"], string> = {
+  valid: "Not arrived",
+  checked_in: "Checked in",
+  cancelled: "Cancelled",
+  refunded: "Refunded",
+};
+
+export function AttendeesTab({ ctx }: { ctx: EventContext }) {
+  const { event, role } = ctx;
+  const [version, setVersion] = useState(0);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("all");
+  const [refunding, setRefunding] = useState<string | null>(null);
+  const [reason, setReason] = useState("");
+  const data = useLoad(`attendees:${event.id}:${version}`, async (signal) => {
+    const [attendees, orders] = await Promise.all([
+      api.request<Attendee[]>(`/events/${event.id}/attendees`, { signal }),
+      api.request<Order[]>(`/events/${event.id}/orders`, { signal }),
+    ]);
+    return { attendees, orders };
+  });
+  async function admit(ticketId: string) {
+    try {
+      const result = await api.request<{ admitted: boolean; message: string }>(`/events/${event.id}/check-in/tickets/${ticketId}`, { method: "POST" });
+      ctx.notify(result.message, !result.admitted);
+      setVersion((v) => v + 1);
+    } catch (e) {
+      ctx.notify(failure(e), true);
+    }
+  }
+  async function refund(orderId: string) {
+    try {
+      await api.request(`/orders/${orderId}/refund`, { body: { reason: reason.trim() } });
+      setRefunding(null);
+      setReason("");
+      setVersion((v) => v + 1);
+      ctx.notify("Order refunded in full (simulated). The buyer was emailed.");
+    } catch (e) {
+      ctx.notify(failure(e), true);
+    }
+  }
+  return (
+    <Loaded data={data}>
+      {({ attendees, orders }) => {
+        const q = search.toLowerCase();
+        const visible = attendees.filter(
+          (a) => (filter === "all" || a.status === filter) && `${a.attendee_name} ${a.attendee_email} ${a.ticket_id} ${a.order_id} ${a.seat ?? ""}`.toLowerCase().includes(q),
+        );
+        const paidOrders = orders.filter((o) => o.status === "confirmed" && o.total_kzt > 0);
+        return (
+          <View style={{ gap: 12 }}>
+            <H2>The guest list</H2>
+            <T muted>One ticket, one check-in. Search by name, email, seat or ticket reference.</T>
+            <Button
+              small
+              kind="secondary"
+              icon="download-outline"
+              label="Export CSV"
+              style={{ alignSelf: "flex-start" }}
+              onPress={() =>
+                shareCsv(`attendees-${event.id.slice(0, 8)}.csv`, [
+                  ["Ticket", "Order", "Name", "Email", "Ticket type", "Seat", "Status", "Checked in at"],
+                  ...attendees.map((a) => [a.ticket_id, a.order_id, a.attendee_name, a.attendee_email, a.ticket_type_name, a.seat ?? "", TICKET_STATUS[a.status], a.checked_in_at ?? ""]),
+                ]).catch((e) => ctx.notify(failure(e), true))
+              }
+            />
+            <Field label="Search guests" value={search} onChangeText={setSearch} placeholder="Name, email, seat or ticket reference" />
+            <Chips
+              value={filter}
+              onChange={setFilter}
+              options={[
+                { value: "all", label: `All (${attendees.length})` },
+                { value: "valid", label: "Not arrived" },
+                { value: "checked_in", label: "Checked in" },
+                { value: "cancelled", label: "Cancelled" },
+                { value: "refunded", label: "Refunded" },
+              ]}
+            />
+            {visible.length ? (
+              visible.map((a) => (
+                <Card key={a.ticket_id}>
+                  <Row wrap={false}>
+                    <Avatar name={a.attendee_name} />
+                    <View style={{ flex: 1 }}>
+                      <T bold>{a.attendee_name}</T>
+                      <T small muted>{a.attendee_email}</T>
+                      <T small muted style={{ fontFamily: "monospace" }}>{ref(a.ticket_id)}</T>
+                    </View>
+                  </Row>
+                  <T small>
+                    {a.ticket_type_name}
+                    {a.seat ? ` · ${a.seat}` : ""} · {TICKET_STATUS[a.status]}
+                    {a.checked_in_at ? ` at ${eventTime(a.checked_in_at, event.timezone)}` : ""}
+                  </T>
+                  {a.status === "valid" && <Button small kind="secondary" icon="ticket-outline" label="Check in" onPress={() => admit(a.ticket_id)} style={{ alignSelf: "flex-start" }} />}
+                </Card>
+              ))
+            ) : (
+              <Empty icon="people-outline" title={attendees.length ? "No guests match this search." : "A guest list waiting to happen."} description={attendees.length ? "Try a different name or status." : "New bookings will appear here."} />
+            )}
+            {role === "owner" && paidOrders.length > 0 && (
+              <>
+                <H2>Refunds</H2>
+                <T small muted>Full refunds only; money moves are simulated.</T>
+                {paidOrders.map((o) => (
+                  <Card key={o.id}>
+                    <Row style={{ justifyContent: "space-between" }}>
+                      <T bold>{o.buyer_name}</T>
+                      <T bold>{amount(o.total_kzt)}</T>
+                    </Row>
+                    <T small muted>
+                      {ref(o.id)} · {o.tickets.length} tickets · {when(o.created_at, event)}
+                    </T>
+                    {refunding === o.id ? (
+                      <>
+                        <Field label="Reason (sent to the buyer)" value={reason} onChangeText={setReason} maxLength={500} />
+                        <Row>
+                          <Button kind="danger" label="Refund" disabled={reason.trim().length < 3} onPress={() => refund(o.id)} />
+                          <Button kind="text" label="Keep" onPress={() => setRefunding(null)} />
+                        </Row>
+                      </>
+                    ) : (
+                      <Button small kind="text" label="Refund order" onPress={() => setRefunding(o.id)} style={{ alignSelf: "flex-start" }} />
+                    )}
+                  </Card>
+                ))}
+              </>
+            )}
+          </View>
+        );
+      }}
+    </Loaded>
+  );
+}
+
+/* ------------------------------ Sales & analytics ------------------------------ */
+
+export function SalesTab({ ctx }: { ctx: EventContext }) {
+  const { event } = ctx;
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const f = validDate(from) ? from : "";
+  const t = validDate(to) ? to : "";
+  const data = useLoad(`analytics:${event.id}:${f}:${t}`, (signal) =>
+    api.request<Analytics>(`/events/${event.id}/analytics`, { signal, query: { date_from: fromLocalInputs(f, "00:00"), date_to: fromLocalInputs(t, "23:59") } }),
+  );
+  return (
+    <View style={{ gap: 12 }}>
+      <Row wrap={false}>
+        <View style={{ flex: 1 }}>
+          <Field label="From" optional value={from} onChangeText={setFrom} placeholder="YYYY-MM-DD" maxLength={10} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Field label="Until" optional value={to} onChangeText={setTo} placeholder="YYYY-MM-DD" maxLength={10} />
+        </View>
+      </Row>
+      <Loaded data={data}>
+        {(a) => {
+          const peak = Math.max(1, ...a.sales_over_time.map((d) => d.revenue_kzt));
+          return (
+            <View style={{ gap: 12 }}>
+              <Row>
+                <Stat label="Net revenue" value={amount(a.revenue.net_revenue_kzt)} note={`Gross ${amount(a.revenue.gross_sales_kzt)} · discounts ${amount(a.revenue.discounts_kzt)} · refunds ${amount(a.revenue.refunds_kzt)}`} icon="stats-chart" />
+                <Stat label="Sold" value={`${a.capacity.percent_sold}%`} note={`${a.capacity.tickets_sold} of ${a.capacity.capacity} · ${a.capacity.tickets_remaining} left`} icon="ticket-outline" />
+                <Stat label="Attendance" value={`${a.attendance.checked_in_percent}%`} note={`${a.attendance.checked_in} checked in · ${a.attendance.absent} absent`} icon="people-outline" />
+              </Row>
+              <H2>Sales over time</H2>
+              {a.sales_over_time.length ? (
+                <Card>
+                  {a.sales_over_time.map((d) => (
+                    <View key={d.date} style={{ gap: 4 }}>
+                      <Row style={{ justifyContent: "space-between" }}>
+                        <T small>{d.date}</T>
+                        <T small muted>
+                          {amount(d.revenue_kzt)} · {d.tickets} tickets
+                        </T>
+                      </Row>
+                      <Progress value={(d.revenue_kzt / peak) * 100} />
+                    </View>
+                  ))}
+                </Card>
+              ) : (
+                <T muted>No sales in this period.</T>
+              )}
+              <H2>By ticket type</H2>
+              {a.by_ticket_type.map((row) => (
+                <Card key={row.ticket_type_id}>
+                  <Row style={{ justifyContent: "space-between" }}>
+                    <T bold>{row.name}</T>
+                    <T bold>{amount(row.revenue_kzt)}</T>
+                  </Row>
+                  <T small muted>
+                    {price(row.price_kzt)} · {row.quantity} places · {row.tickets_sold} sold · {row.checked_in} checked in
+                  </T>
+                </Card>
+              ))}
+              {a.campaigns.length > 0 && (
+                <>
+                  <H2>Promo campaigns</H2>
+                  {a.campaigns.map((c) => (
+                    <Card key={c.campaign_id}>
+                      <T bold>
+                        {c.name} · {c.code}
+                      </T>
+                      <T small muted>
+                        {c.redemptions} uses · {c.tickets_sold} tickets · {amount(c.net_revenue_kzt)}
+                      </T>
+                    </Card>
+                  ))}
+                </>
+              )}
+              {a.is_simulated && <T small muted>Payments are simulated; no real money was collected.</T>}
+            </View>
+          );
+        }}
+      </Loaded>
+    </View>
+  );
+}
+
+/* ------------------------------ Team ------------------------------ */
+
+export function TeamTab({ ctx }: { ctx: EventContext }) {
+  const { event, role } = ctx;
+  const [version, setVersion] = useState(0);
+  const [email, setEmail] = useState("");
+  const [newRole, setNewRole] = useState<StaffRole>("checkin_staff");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const staff = useLoad(`staff:${event.id}:${version}`, (signal) => api.request<StaffMember[]>(`/events/${event.id}/staff`, { signal }));
+  async function add() {
+    setError("");
+    setBusy(true);
+    try {
+      await api.request(`/events/${event.id}/staff`, { body: { email: email.trim(), role: newRole } });
+      setEmail("");
+      setVersion((v) => v + 1);
+      ctx.notify("Team member added. They see this event the next time they sign in.");
+    } catch (e) {
+      setError(failure(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function remove(member: StaffMember) {
+    try {
+      await api.request(`/events/${event.id}/staff/${member.user_id}`, { method: "DELETE" });
+      setVersion((v) => v + 1);
+      ctx.notify(`${member.full_name} no longer works on this event.`);
+    } catch (e) {
+      ctx.notify(failure(e), true);
+    }
+  }
+  return (
+    <View style={{ gap: 12 }}>
+      <H2>Good people at the door.</H2>
+      <T muted>Add people by the email of their BiletFlow account. Managers can run the event; check-in staff only scan tickets.</T>
+      <Loaded data={staff}>
+        {(list) =>
+          list.map((member) => (
+            <Card key={member.id}>
+              <Row wrap={false}>
+                <Avatar name={member.full_name} />
+                <View style={{ flex: 1 }}>
+                  <T bold>{member.full_name}</T>
+                  <T small muted>{member.email}</T>
+                  <T small>{ROLE_LABELS[member.role]}</T>
+                </View>
+                {member.role !== "owner" && (role === "owner" || member.role !== "manager") && (
+                  <Button small kind="danger" label="Remove" onPress={() => remove(member)} />
+                )}
+              </Row>
+            </Card>
+          ))
+        }
+      </Loaded>
+      <Card>
+        <H2>Add a team member</H2>
+        <Field label="Email of their BiletFlow account" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" maxLength={255} placeholder="teammate@example.com" />
+        <Select
+          label="Role"
+          value={newRole}
+          onChange={setNewRole}
+          options={[
+            { value: "checkin_staff", label: "Check-in staff" },
+            { value: "support_staff", label: "Support staff (answers guest questions)" },
+            ...(role === "owner" ? [{ value: "manager" as StaffRole, label: "Manager" }] : []),
+          ]}
+        />
+        {error ? <Notice error>{error}</Notice> : null}
+        <Button icon="add" label="Add to the team" busy={busy} disabled={!email.includes("@")} onPress={add} />
+      </Card>
+    </View>
+  );
+}
+
+/* ------------------------------ Activity ------------------------------ */
+
+const AREAS = [
+  ["", "Everything"],
+  ["event", "Event details"],
+  ["ticket_type", "Ticket types"],
+  ["order", "Orders"],
+  ["payment", "Payments"],
+  ["refund", "Refunds"],
+  ["staff", "Team"],
+  ["activation", "Paid sales"],
+  ["check_in", "Check-in"],
+  ["promo", "Promotions"],
+  ["support", "Support"],
+] as const;
+
+export function ActivityTab({ ctx }: { ctx: EventContext }) {
+  const { event } = ctx;
+  const [area, setArea] = useState("");
+  const log = useLoad(`activity:${event.id}:${area}`, (signal) =>
+    api.request<ActivityEntry[]>(`/events/${event.id}/activity`, { signal, query: { area: area || undefined, limit: 100 } }),
+  );
+  return (
+    <View style={{ gap: 12 }}>
+      <H2>Event history</H2>
+      <T muted>Who changed what, and when. Entries cannot be edited or deleted.</T>
+      <Select label="Show" value={area} onChange={setArea} options={AREAS.map(([value, label]) => ({ value, label }))} />
+      <Loaded data={log}>
+        {(entries) =>
+          entries.length ? (
+            entries.map((entry) => (
+              <View key={entry.id} style={{ borderLeftWidth: 2, borderLeftColor: color.ember, paddingLeft: 10, gap: 2 }}>
+                <T small muted>{when(entry.created_at, event)}</T>
+                <T>
+                  <T bold>{entry.actor_name ?? "BiletFlow"}</T> {entry.description}
+                </T>
+              </View>
+            ))
+          ) : (
+            <T muted>Nothing recorded yet.</T>
+          )
+        }
+      </Loaded>
+    </View>
+  );
+}

@@ -79,3 +79,7 @@ UPDATE users SET is_platform_admin = true, email_verified_at = now() WHERE email
 ## Local development
 
 See `backend/README.md` (Docker Compose with Postgres and Mailpit) and `frontend/README.md`.
+
+## Mobile app (`mobile/`)
+
+The Expo app talks to the deployed backend directly (`mobile/app.json` → `extra.apiUrl`) with bearer tokens, so no Vercel project is needed for it. Run it with `cd mobile && npm install && npx expo start` and open it in Expo Go; see `mobile/README.md`.

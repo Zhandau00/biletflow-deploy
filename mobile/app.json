@@ -1,0 +1,56 @@
+{
+  "expo": {
+    "name": "BiletFlow",
+    "slug": "biletflow",
+    "scheme": "biletflow",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#130f17",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "kz.biletflow.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "BiletFlow uses the camera to scan ticket QR codes at the door."
+      }
+    },
+    "android": {
+      "package": "kz.biletflow.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#130f17",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-web-browser",
+      "expo-image",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "BiletFlow uses the camera to scan ticket QR codes at the door."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "BiletFlow lets organizers add event images from your photos."
+        }
+      ],
+      "expo-localization",
+      "expo-font"
+    ],
+    "extra": {
+      "apiUrl": "https://biletflow-api.vercel.app/api/v1",
+      "webUrl": "https://biletflow-web-five.vercel.app"
+    }
+  }
+}
