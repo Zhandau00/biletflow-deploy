@@ -30,6 +30,21 @@ npx expo start
 
 Install **Expo Go** on your phone and scan the QR code from the terminal. Every native module the app uses is part of Expo Go, so no build is needed. `npx expo start --web` runs it in a browser; then the backend's `ORIGINS` has to allow that address.
 
+## Share it without your computer (EAS Update)
+
+The app is linked to the Expo project `@zhandaulets/biletflow` and published to the `main` branch of EAS Update, so anyone with **Expo Go** (SDK 58) can open it without a running dev server:
+
+- Open https://expo.dev/accounts/zhandaulets/projects/biletflow/updates, pick the latest update and use its **Preview** QR code; or
+- send people the link `exp://u.expo.dev/b4eafee8-677b-4d50-b584-ccd195dc493e?channel-name=main` (open it on the phone, or scan it as a QR code).
+
+After changing the app, publish a new version (sign in first with `npx expo login`):
+
+```bash
+npm run release -- --message "What changed"
+```
+
+`release` builds the Android and iOS bundles with one worker (the default parallel build can run out of memory) and uploads them. Expo Go only loads updates made for its SDK, so the runtime version follows the SDK (`exposdk:58.0.0`).
+
 ## Checks
 
 ```bash

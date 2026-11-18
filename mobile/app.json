@@ -36,7 +36,8 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "BiletFlow uses the camera to scan ticket QR codes at the door."
+          "cameraPermission": "BiletFlow uses the camera to scan ticket QR codes at the door.",
+          "recordAudioAndroid": false
         }
       ],
       [
@@ -50,7 +51,22 @@
     ],
     "extra": {
       "apiUrl": "https://biletflow-api.vercel.app/api/v1",
-      "webUrl": "https://biletflow-web-five.vercel.app"
+      "webUrl": "https://biletflow-web-five.vercel.app",
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "b4eafee8-677b-4d50-b584-ccd195dc493e"
+      }
+    },
+    "owner": "zhandaulets",
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/b4eafee8-677b-4d50-b584-ccd195dc493e"
     }
   }
 }

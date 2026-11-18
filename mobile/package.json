@@ -19,6 +19,7 @@
     "expo-secure-store": "~58.0.3",
     "expo-sharing": "~58.0.23",
     "expo-status-bar": "~58.0.5",
+    "expo-updates": "~58.0.22",
     "expo-web-browser": "~58.1.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
@@ -44,7 +45,9 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "bundle": "expo export --platform android --platform ios --max-workers 1 --dump-sourcemap --dump-assetmap --output-dir dist",
+    "release": "npm run bundle && npx eas-cli update --branch main --environment production --skip-bundler --input-dir dist --platform all"
   },
   "private": true
 }
