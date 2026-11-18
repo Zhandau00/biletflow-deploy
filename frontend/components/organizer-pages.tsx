@@ -395,7 +395,7 @@ export function EventEditor({ existing, onSaved }: { existing?: ApiEvent; onSave
       capacity: Number(data.get("capacity")),
       visibility: text("visibility"),
       refund_policy: text("refund_policy") || null,
-      ...(existing ? {} : { seating_type: seating }),
+      // Numbered seats are set up after creation (POST /events/{id}/seating)
     };
     setBusy(true);
     setError("");
@@ -417,7 +417,7 @@ export function EventEditor({ existing, onSaved }: { existing?: ApiEvent; onSave
               body: { name: t.name.trim(), description: t.description.trim() || null, price_kzt: t.price, quantity: t.quantity },
             });
         await refreshSession();
-        router.push(`/organizer/events/${created.id}${seating === "assigned" ? "?tab=Tickets" : ""}`);
+        router.push(`/organizer/events/${created.id}${seating === "assigned" ? "?tab=Tickets&seating=1" : ""}`);
       }
     } catch (e) {
       setError(failure(e, "Could not save this event."));
@@ -532,7 +532,11 @@ export function EventEditor({ existing, onSaved }: { existing?: ApiEvent; onSave
             <label>
               Capacity
               <input type="number" name="capacity" min={1} max={1000000} defaultValue={existing?.capacity ?? 100} required />
-              <span className="field-hint">All ticket types together cannot exceed it</span>
+              <span className="field-hint">
+                {seating === "assigned"
+                  ? "With numbered seats, the hall you choose next sets the capacity"
+                  : "All ticket types together cannot exceed it"}
+              </span>
             </label>
             {!existing ? (
               <label>

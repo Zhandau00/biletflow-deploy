@@ -522,7 +522,7 @@ input::placeholder, textarea::placeholder { color: #84798c; }
 .manage-title+.page-intro .eyebrow { display: none; }
 .manage-title+.page-intro { align-items: flex-start; }
 .manage-title+.page-intro h1 { font-size: 37px; margin: 0; }
-.button-row { display: flex; gap: 10px; }
+.button-row { display: flex; flex-wrap: wrap; gap: 10px; }
 .button-row>.btn { font-size: 11px; padding: 10px 13px; min-height: 39px; }
 .event-overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 35px; margin-top: 36px; }
 .event-overview-grid .poster-title { font-size: 40px; }

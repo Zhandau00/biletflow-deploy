@@ -185,7 +185,21 @@ export function TicketsTab({ ctx }: { ctx: EventContext }) {
     api.request<TicketStats>(`/events/${event.id}/ticket-stats`, { signal }),
   );
   const refresh = () => setVersion((v) => v + 1);
-  if (event.seating_type === "assigned") return <SeatingSetup ctx={ctx} stats={stats.data} onDone={refresh} />;
+  // Chosen on the new-event form (?seating=1) or with the button below; the
+  // event only becomes "assigned" once a layout is saved
+  const [wantSeats, setWantSeats] = useState(
+    () => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("seating") === "1",
+  );
+  const canSwitch = (stats.data?.ticket_types.length ?? 0) === 0 && (event.status === "draft" || event.status === "published");
+  if (event.seating_type === "assigned" || (wantSeats && canSwitch))
+    return (
+      <SeatingSetup
+        ctx={ctx}
+        stats={stats.data}
+        onDone={refresh}
+        onCancel={event.seating_type === "assigned" ? undefined : () => setWantSeats(false)}
+      />
+    );
   return (
     <Loading data={stats}>
       {(s) => (
@@ -223,9 +237,16 @@ export function TicketsTab({ ctx }: { ctx: EventContext }) {
           {editing === "new" ? (
             <TicketTypeForm ctx={ctx} onDone={() => { setEditing(null); refresh(); }} />
           ) : (
-            <button className="btn btn-secondary" onClick={() => setEditing("new")}>
-              <Icon name="plus" size={16} /> Add ticket type
-            </button>
+            <div className="button-row">
+              <button className="btn btn-secondary" onClick={() => setEditing("new")}>
+                <Icon name="plus" size={16} /> Add ticket type
+              </button>
+              {canSwitch && (
+                <button className="btn btn-secondary" onClick={() => setWantSeats(true)}>
+                  Use numbered seats instead
+                </button>
+              )}
+            </div>
           )}
         </>
       )}
@@ -340,7 +361,17 @@ function TicketTypeForm({ ctx, existing, onDone }: { ctx: EventContext; existing
   );
 }
 
-function SeatingSetup({ ctx, stats, onDone }: { ctx: EventContext; stats?: TicketStats; onDone: () => void }) {
+function SeatingSetup({
+  ctx,
+  stats,
+  onDone,
+  onCancel,
+}: {
+  ctx: EventContext;
+  stats?: TicketStats;
+  onDone: () => void;
+  onCancel?: () => void;
+}) {
   const { event } = ctx;
   const layouts = useLoad("venue-layouts", (signal) => api.request<VenueLayout[]>("/venue-layouts", { signal }));
   const [venue, setVenue] = useState(event.venue_layout_id ?? "");
@@ -437,6 +468,11 @@ function SeatingSetup({ ctx, stats, onDone }: { ctx: EventContext; stats?: Ticke
               <button className="btn btn-primary" disabled={busy}>
                 {busy ? "Saving…" : configured ? "Update seating" : "Set up seating"}
               </button>
+              {onCancel && (
+                <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={busy}>
+                  Use general admission instead
+                </button>
+              )}
             </form>
           )
         }
