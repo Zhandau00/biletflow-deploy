@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { eventDate } from "@/lib/events";
+import { useT } from "@/components/language";
 
 /** What a poster shows (see posterInfo in lib/events). */
 export type PosterInfo = {
@@ -107,12 +108,12 @@ export function Icon({ name, size = 20 }: { name: string; size?: number }) {
   );
 }
 export function Brand() {
+  const t = useT();
   return (
-    <Link href="/" className="brand" aria-label="BiletFlow home">
+    <Link href="/" className="brand" aria-label={t("BiletFlow home")}>
       <span className="brand-mark">
         <Icon name="ticket" />
-      </span>
-      Bilet<span>Flow</span>
+      </span>{t("Bilet")}<span>{t("Flow")}</span>
       <span className="brand-period">.</span>
     </Link>
   );
@@ -175,50 +176,39 @@ export function Poster({
   event: PosterInfo;
   compact?: boolean;
 }) {
+  const t = useT();
   const zone = event.timeZone ?? "Asia/Almaty";
   const day = eventDate(event.date, zone);
   const year = eventDate(event.date, zone, { year: "numeric" });
   const words: Record<string, ReactNode> = {
     concert: (
-      <>
-        STEPPE
-        <br />
-        <i>SOUND</i>
+      <>{t("STEPPE")}<br />
+        <i>{t("SOUND")}</i>
       </>
     ),
     cine: (
-      <>
-        THE LONG
-        <br />
-        <i>AFTERNOON</i>
+      <>{t("THE LONG")}<br />
+        <i>{t("AFTERNOON")}</i>
       </>
     ),
     theatre: (
-      <>
-        ABAI
-        <br />
-        <i>in three acts</i>
+      <>{t("ABAI")}<br />
+        <i>{t("in three acts")}</i>
       </>
     ),
     fest: (
-      <>
-        DESHT
-        <br />
-        <i>electronic</i>
+      <>{t("DESHT")}<br />
+        <i>{t("electronic")}</i>
       </>
     ),
     comedy: (
-      <>
-        THE
-        <br />
-        <i>LATE LIST</i>
+      <>{t("THE")}<br />
+        <i>{t("LATE LIST")}</i>
       </>
     ),
     sport: (
-      <>
-        TIGERS
-        <br />
-        <i>× FALCONS</i>
+      <>{t("TIGERS")}<br />
+        <i>{t("× FALCONS")}</i>
       </>
     ),
   };
@@ -233,7 +223,7 @@ export function Poster({
         <img className="poster-photo" src={event.image} alt="" loading="lazy" />
       )}
       <div className="poster-top">
-        <span>BILETFLOW / LIVE CULTURE</span>
+        <span>{t("BILETFLOW / LIVE CULTURE")}</span>
         <span>{day}</span>
       </div>
       <div className="poster-art">
@@ -272,31 +262,33 @@ export function Notice({
   );
 }
 export function LoadingPage() {
+  const t = useT();
   return (
     <div className="workspace loading-page" aria-busy="true">
-      <span className="eyebrow">Just a moment</span>
+      <span className="eyebrow">{t("Just a moment")}</span>
       <div className="skeleton skeleton-title" />
       <div className="skeleton skeleton-panel" />
     </div>
   );
 }
 export function Gate({ organizer = false }: { organizer?: boolean }) {
+  const t = useT();
   return (
     <div className="workspace">
       <EmptyState
         icon={organizer ? "grid" : "ticket"}
         title={
           organizer
-            ? "Your box office starts here."
-            : "Keep your nights in one place."
+            ? t("Your box office starts here.")
+            : t("Keep your nights in one place.")
         }
         description={
           organizer
-            ? "Sign in with an organizer profile to create events and manage your guest list."
-            : "Sign in to see your orders, book an event, and download your tickets."
+            ? t("Sign in with an organizer profile to create events and manage your guest list.")
+            : t("Sign in to see your orders, book an event, and download your tickets.")
         }
         href={organizer ? "/sign-in?role=organizer" : "/sign-in"}
-        label="Sign in"
+        label={t("Sign in")}
       />
     </div>
   );

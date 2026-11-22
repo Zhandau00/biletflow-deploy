@@ -33,21 +33,22 @@ import { useSession } from "./session-provider";
 import { SupportLink } from "./support-pages";
 import { useLoad } from "./use-load";
 import { EmptyState, Icon, LoadingPage, Notice, PageIntro, Poster } from "./primitives";
+import { useT } from "@/components/language";
 
 function LoadError({ message, retry }: { message: string; retry: () => void }) {
+  const t = useT();
   return (
     <Notice error>
       {message}{" "}
-      <button className="text-link" onClick={retry}>
-        Try again
-      </button>
+      <button className="text-link" onClick={retry}>{t("Try again")}</button>
     </Notice>
   );
 }
 
 function CardSkeletons({ count = 6 }: { count?: number }) {
+  const t = useT();
   return (
-    <div className="event-grid" aria-busy="true" aria-label="Loading events">
+    <div className="event-grid" aria-busy="true" aria-label={t("Loading events")}>
       {Array.from({ length: count }, (_, i) => (
         <div key={i} className="discovery-card">
           <div className="skeleton skeleton-poster" />
@@ -84,6 +85,7 @@ export function EventCard({ event }: { event: ListedEvent }) {
 }
 
 export function LandingEvents() {
+  const t = useT();
   const events = useLoad("landing", (signal) => api.events.list({}, { signal }));
   if (events.status === "error" && !events.data)
     return <LoadError message={events.error.message} retry={events.reload} />;
@@ -97,8 +99,8 @@ export function LandingEvents() {
     </div>
   ) : (
     <EmptyState
-      title="The next good night is taking shape."
-      description="New events will appear here as soon as their organizers publish them."
+      title={t("The next good night is taking shape.")}
+      description={t("New events will appear here as soon as their organizers publish them.")}
     />
   );
 }
@@ -124,6 +126,7 @@ export function BrowsePage({
   city?: string;
   when?: string;
 }) {
+  const t = useT();
   const [search, setSearch] = useState(query);
   const [selected, setSelected] = useState(categoryValue(category));
   const [location, setLocation] = useState(
@@ -171,35 +174,37 @@ export function BrowsePage({
   return (
     <main className="workspace browse-page">
       <PageIntro
-        eyebrow="Out of the ordinary. Into the city."
-        title="Make a night of it."
-        description="Big stages, small rooms, and everything worth showing up for."
+        eyebrow={t("Out of the ordinary. Into the city.")}
+        title={t("Make a night of it.")}
+        description={t("Big stages, small rooms, and everything worth showing up for.")}
       />
       <div className="browse-search">
         <label className="search-input">
           <Icon name="search" />
-          <span className="sr-only">Search events, venues</span>
+          <span className="sr-only">{t("Search events, venues")}</span>
           <input
             type="search"
             value={search}
             maxLength={100}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="An event, an artist, a venue…"
+            placeholder={t("An event, an artist, a venue…")}
           />
         </label>
         <label>
           <Icon name="pin" size={17} />
-          <span className="sr-only">City</span>
+          <span className="sr-only">{t("City")}</span>
           <select value={location} onChange={(e) => setLocation(e.target.value)}>
-            <option value="">All cities</option>
+            <option value="">{t("All cities")}</option>
             {CITIES.map((c) => (
-              <option key={c}>{c}</option>
+              <option key={c} value={c}>
+                {t(c)}
+              </option>
             ))}
           </select>
         </label>
         <label>
           <Icon name="calendar" size={17} />
-          <span className="sr-only">When</span>
+          <span className="sr-only">{t("When")}</span>
           <select value={date} onChange={(e) => setDate(normaliseWhen(e.target.value))}>
             {WHEN_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -210,15 +215,15 @@ export function BrowsePage({
         </label>
       </div>
       <div className="filter-row">
-        <div className="filter-tabs" aria-label="Event categories">
-          {[{ value: "", label: "All events" }, ...CATEGORIES].map((c) => (
+        <div className="filter-tabs" aria-label={t("Event categories")}>
+          {[{ value: "", label: t("All events") }, ...CATEGORIES].map((c) => (
             <button
               key={c.value}
               aria-pressed={selected === c.value}
               className={selected === c.value ? "active" : ""}
               onClick={() => setSelected(c.value)}
             >
-              {c.label}
+              {t(c.label)}
             </button>
           ))}
         </div>
@@ -226,18 +231,17 @@ export function BrowsePage({
       <div className="results-meta" aria-live="polite">
         <span>
           {events.data
-            ? `${list.length} ${list.length === 1 ? "event" : "events"} to look forward to`
-            : "Finding events…"}
+            ? t.plural(list.length, "{n} event to look forward to", "{n} events to look forward to")
+            : t("Finding events…")}
         </span>
-        <label>
-          Sort by{" "}
+        <label>{t("Sort by")}{" "}
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value === "price" ? "price" : "date")}
-            aria-label="Sort events"
+            aria-label={t("Sort events")}
           >
-            <option value="date">Soonest first</option>
-            <option value="price">Lowest price</option>
+            <option value="date">{t("Soonest first")}</option>
+            <option value="price">{t("Lowest price")}</option>
           </select>
         </label>
       </div>
@@ -256,21 +260,18 @@ export function BrowsePage({
         <>
           <EmptyState
             icon="search"
-            title="Nothing on the bill just yet."
-            description="Try a different city, category, date or search. A good night might be one filter away."
+            title={t("Nothing on the bill just yet.")}
+            description={t("Try a different city, category, date or search. A good night might be one filter away.")}
           />
-          <button className="btn btn-secondary reset-filters" onClick={reset}>
-            Clear filters
-          </button>
+          <button className="btn btn-secondary reset-filters" onClick={reset}>{t("Clear filters")}</button>
         </>
       )}
       <div className="organizer-invite">
         <div>
-          <span className="eyebrow">On the other side of the stage?</span>
-          <h2>Put your event on the map.</h2>
+          <span className="eyebrow">{t("On the other side of the stage?")}</span>
+          <h2>{t("Put your event on the map.")}</h2>
         </div>
-        <Link className="btn btn-secondary" href="/organizer">
-          Meet your box office <Icon name="arrow" size={17} />
+        <Link className="btn btn-secondary" href="/organizer">{t("Meet your box office")}{" "}<Icon name="arrow" size={17} />
         </Link>
       </div>
     </main>
@@ -326,6 +327,7 @@ function EventView({
   images,
   promoToken,
 }: EventDetails & { promoToken?: string }) {
+  const t = useT();
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [promo, setPromo] = useState<{ label: string; name: string } | null>(null);
   useEffect(() => {
@@ -354,18 +356,14 @@ function EventView({
   return (
     <main className="workspace">
       <Link href="/events" className="text-link muted back-link">
-        <Icon name="back" size={15} />
-        All events
-      </Link>
+        <Icon name="back" size={15} />{t("All events")}</Link>
       {cancelled && (
-        <Notice error>
-          This event has been cancelled. Ticket holders are refunded automatically and were told by email.
-        </Notice>
+        <Notice error>{t("This event has been cancelled. Ticket holders are refunded automatically and were told by email.")}</Notice>
       )}
-      {ended && <Notice>This event has ended.</Notice>}
-      {event.lifecycle === "active" && <Notice>Happening now.</Notice>}
+      {ended && <Notice>{t("This event has ended.")}</Notice>}
+      {event.lifecycle === "active" && <Notice>{t("Happening now.")}</Notice>}
       {event.lifecycle === "draft" && (
-        <Notice>Draft preview — only the event team can see this page until it is published.</Notice>
+        <Notice>{t("Draft preview — only the event team can see this page until it is published.")}</Notice>
       )}
       <div className="event-detail-layout">
         <div className="event-story">
@@ -406,9 +404,9 @@ function EventView({
             <div>
               <Icon name="pin" />
               <span>
-                <strong>{event.venue_name ?? "Venue to be announced"}</strong>
+                <strong>{event.venue_name ?? t("Venue to be announced")}</strong>
                 <small>
-                  {[event.venue_address, event.city].filter(Boolean).join(", ") || "Kazakhstan"}
+                  {[event.venue_address, event.city].filter(Boolean).join(", ") || t("Kazakhstan")}
                   {mapQuery && (
                     <>
                       {" · "}
@@ -417,9 +415,7 @@ function EventView({
                         href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`}
                         target="_blank"
                         rel="noreferrer"
-                      >
-                        Map
-                      </a>
+                      >{t("Map")}</a>
                     </>
                   )}
                 </small>
@@ -428,9 +424,9 @@ function EventView({
           </div>
           {!cancelled && !ended && <CalendarMenu eventId={event.id} />}
           <section className="event-about">
-            <h2>A little about the event</h2>
+            <h2>{t("A little about the event")}</h2>
             <p className="pre-line">
-              {event.description || "The organizer has not added a description yet."}
+              {event.description || t("The organizer has not added a description yet.")}
             </p>
             {extraImages.length > 0 && (
               <div className="event-gallery">
@@ -441,75 +437,72 @@ function EventView({
               </div>
             )}
             <div className="good-to-know">
-              <span className="eyebrow">Good to know</span>
-              <p>
-                Each ticket admits one person and has its own QR code. Keep it on your phone or
-                print the PDF.
-                {assigned && " This event has numbered seats; you choose them at checkout."}
+              <span className="eyebrow">{t("Good to know")}</span>
+              <p>{t("Each ticket admits one person and has its own QR code. Keep it on your phone or print the PDF.")}{assigned && t(" This event has numbered seats; you choose them at checkout.")}
               </p>
               {event.refund_policy && (
                 <>
-                  <span className="eyebrow">Refunds</span>
+                  <span className="eyebrow">{t("Refunds")}</span>
                   <p className="pre-line">{event.refund_policy}</p>
                 </>
               )}
             </div>
           </section>
           <div className="host-line">
-            <span className="avatar">{(organizer || "Organizer")[0]}</span>
+            <span className="avatar">{(organizer || t("Organizer"))[0]}</span>
             <div>
-              <small>Put together by</small>
-              <p>{organizer || "Independent organizer"}</p>
+              <small>{t("Put together by")}</small>
+              <p>{organizer || t("Independent organizer")}</p>
             </div>
           </div>
           <div className="event-support-actions">
-            <SupportLink eventId={event.id} label="Ask about this event" />
+            <SupportLink eventId={event.id} label={t("Ask about this event")} />
             <EventReport eventId={event.id} />
           </div>
         </div>
         <aside className="booking-panel">
           <div className="booking-heading">
-            <span className="eyebrow">Save your place</span>
+            <span className="eyebrow">{t("Save your place")}</span>
             <Icon name="ticket" />
           </div>
-          <h2>See you there.</h2>
+          <h2>{t("See you there.")}</h2>
           <p className="muted">
-            {assigned ? "Numbered seats: pick yours on the seat map." : "Choose your tickets. Bring your people."}
+            {assigned ? t("Numbered seats: pick yours on the seat map.") : t("Choose your tickets. Bring your people.")}
           </p>
           <div className="ticket-options">
-            {tickets.length === 0 && <p className="muted">Tickets have not been released yet.</p>}
-            {tickets.map((t) => {
-              const block = blocks[t.id];
-              const quantity = quantities[t.id] ?? 0;
-              const limit = Math.min(t.max_per_order, t.available);
+            {tickets.length === 0 && <p className="muted">{t("Tickets have not been released yet.")}</p>}
+            {tickets.map((type) => {
+              const block = blocks[type.id];
+              const quantity = quantities[type.id] ?? 0;
+              const limit = Math.min(type.max_per_order, type.available);
               return (
-                <div className="ticket-option" key={t.id}>
+                <div className="ticket-option" key={type.id}>
                   <div>
-                    <strong>{t.name}</strong>
-                    {t.description && <p>{t.description}</p>}
+                    <strong>{type.name}</strong>
+                    {type.description && <p>{type.description}</p>}
                     <small>
-                      {block ?? (t.available <= 10 ? `Only ${t.available} left` : `${t.available} available`)}
+                      {block ?? (type.available <= 10 ? t("Only {available} left", { available: type.available }) : t("{available} available", { available: type.available }))}
                     </small>
                   </div>
                   <div className="ticket-option-bottom">
-                    <span>{price(t.price_kzt)}</span>
+                    <span>{price(type.price_kzt)}</span>
                     {!assigned && <div className="quantity-control">
                       <button
                         disabled={!quantity}
                         onClick={() =>
-                          setQuantities((q) => ({ ...q, [t.id]: Math.max(0, (q[t.id] ?? 0) - 1) }))
+                          setQuantities((q) => ({ ...q, [type.id]: Math.max(0, (q[type.id] ?? 0) - 1) }))
                         }
-                        aria-label={`Remove one ${t.name} ticket`}
+                        aria-label={t("Remove one {name} ticket", { name: type.name })}
                       >
                         <Icon name="minus" size={14} />
                       </button>
-                      <output aria-label={`${t.name} quantity`}>{quantity}</output>
+                      <output aria-label={t("{name} quantity", { name: type.name })}>{quantity}</output>
                       <button
                         disabled={!!block || quantity >= limit}
                         onClick={() =>
-                          setQuantities((q) => ({ ...q, [t.id]: Math.min(limit, (q[t.id] ?? 0) + 1) }))
+                          setQuantities((q) => ({ ...q, [type.id]: Math.min(limit, (q[type.id] ?? 0) + 1) }))
                         }
-                        aria-label={`Add one ${t.name} ticket`}
+                        aria-label={t("Add one {name} ticket", { name: type.name })}
                       >
                         <Icon name="plus" size={14} />
                       </button>
@@ -521,38 +514,35 @@ function EventView({
           </div>
           <div className="booking-total">
             <span>
-              {count} {count === 1 ? "ticket" : "tickets"}
+              {t.plural(count, "{n} ticket", "{n} tickets")}
             </span>
             <strong>{count ? price(total) : "—"}</strong>
           </div>
           {promo && (
             <Notice>
-              {promo.label} with {promo.name} — applied at checkout.
-            </Notice>
+              {t("{label} with {name} — applied at checkout.", { label: promo.label, name: promo.name })}</Notice>
           )}
           {assigned && !cancelled && !ended ? (
             <Link
               className="btn btn-primary btn-full"
               aria-disabled={!tickets.some((t) => !blocks[t.id])}
               href={`/checkout/${event.id}?seats=${promoSuffix}`}
-            >
-              Choose your seats
-              <Icon name="arrow" size={16} />
+            >{t("Choose your seats")}<Icon name="arrow" size={16} />
             </Link>
           ) : count ? (
             <Link
               className="btn btn-primary btn-full"
               href={`/checkout/${event.id}?tickets=${encodeURIComponent(JSON.stringify(quantities))}${promoSuffix}`}
             >
-              {total ? "Continue to checkout" : "Register for free"}
+              {total ? t("Continue to checkout") : t("Register for free")}
               <Icon name="arrow" size={16} />
             </Link>
           ) : (
             <button className="btn btn-primary btn-full" disabled>
-              {cancelled ? "Event cancelled" : ended ? "This event has ended" : "Choose your tickets"}
+              {cancelled ? t("Event cancelled") : ended ? t("This event has ended") : t("Choose your tickets")}
             </button>
           )}
-          <p className="booking-footnote">Your places are held for 10 minutes while you check out.</p>
+          <p className="booking-footnote">{t("Your places are held for 10 minutes while you check out.")}</p>
         </aside>
       </div>
     </main>
@@ -560,6 +550,7 @@ function EventView({
 }
 
 function CalendarMenu({ eventId }: { eventId: string }) {
+  const t = useT();
   const [links, setLinks] = useState<{ google: string; outlook: string; yahoo: string } | null>(null);
   const [error, setError] = useState("");
   async function open() {
@@ -567,26 +558,23 @@ function CalendarMenu({ eventId }: { eventId: string }) {
     try {
       setLinks(await api.events.calendarLinks(eventId));
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : "Calendar links are not available.");
+      setError(failure instanceof Error ? failure.message : t("Calendar links are not available."));
     }
   }
   return (
     <details className="calendar-menu" onToggle={(e) => e.currentTarget.open && void open()}>
       <summary className="btn btn-secondary btn-small">
-        <Icon name="calendar" size={16} /> Add to calendar
-      </summary>
+        <Icon name="calendar" size={16} />{" "}{t("Add to calendar")}</summary>
       <div className="calendar-options">
-        <a href={api.events.calendarFile(eventId)} download>
-          Apple / other (.ics)
-        </a>
+        <a href={api.events.calendarFile(eventId)} download>{t("Apple / other (.ics)")}</a>
         {links ? (
           <>
-            <a href={links.google} target="_blank" rel="noreferrer">Google Calendar</a>
-            <a href={links.outlook} target="_blank" rel="noreferrer">Outlook</a>
-            <a href={links.yahoo} target="_blank" rel="noreferrer">Yahoo</a>
+            <a href={links.google} target="_blank" rel="noreferrer">{t("Google Calendar")}</a>
+            <a href={links.outlook} target="_blank" rel="noreferrer">{t("Outlook")}</a>
+            <a href={links.yahoo} target="_blank" rel="noreferrer">{t("Yahoo")}</a>
           </>
         ) : (
-          <span className="muted">{error || "Loading…"}</span>
+          <span className="muted">{error || t("Loading…")}</span>
         )}
       </div>
     </details>
@@ -594,6 +582,7 @@ function CalendarMenu({ eventId }: { eventId: string }) {
 }
 
 function EventReport({ eventId }: { eventId: string }) {
+  const t = useT();
   const { user, ready } = useSession();
   const [feedback, setFeedback] = useState<{ message: string; error: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -605,11 +594,11 @@ function EventReport({ eventId }: { eventId: string }) {
     setFeedback(null);
     try {
       await api.request(`/events/${eventId}/reports`, { body: { reason } });
-      setFeedback({ message: "Thank you. The BiletFlow team will review this event.", error: false });
+      setFeedback({ message: t("Thank you. The BiletFlow team will review this event."), error: false });
       form.reset();
     } catch (error) {
       setFeedback({
-        message: error instanceof Error ? error.message : "Could not send the report.",
+        message: error instanceof Error ? error.message : t("Could not send the report."),
         error: true,
       });
     } finally {
@@ -618,30 +607,26 @@ function EventReport({ eventId }: { eventId: string }) {
   }
   return (
     <details className="event-report">
-      <summary>Report this event</summary>
+      <summary>{t("Report this event")}</summary>
       {!ready ? null : user ? (
         <form className="stack-form" onSubmit={submit}>
-          <label>
-            What should the platform review?
-            <textarea
+          <label>{t("What should the platform review?")}<textarea
               name="reason"
               required
               minLength={10}
               maxLength={1000}
               rows={3}
-              placeholder="Misleading information, a suspected scam, a safety concern…"
+              placeholder={t("Misleading information, a suspected scam, a safety concern…")}
             />
           </label>
           <button className="btn btn-secondary" disabled={busy}>
-            {busy ? "Sending…" : "Send report"}
+            {busy ? t("Sending…") : t("Send report")}
           </button>
           {feedback && <Notice error={feedback.error}>{feedback.message}</Notice>}
         </form>
       ) : (
         <p className="auth-switch">
-          <Link href={`/sign-in?next=${encodeURIComponent(`/events/${eventId}`)}`}>
-            Sign in to report this event
-          </Link>
+          <Link href={`/sign-in?next=${encodeURIComponent(`/events/${eventId}`)}`}>{t("Sign in to report this event")}</Link>
         </p>
       )}
     </details>
@@ -649,13 +634,14 @@ function EventReport({ eventId }: { eventId: string }) {
 }
 
 function MissingEvent() {
+  const t = useT();
   return (
     <main className="workspace">
       <EmptyState
-        title="This one isn’t on the bill."
-        description="The event may be a draft, private, or the link may have changed."
+        title={t("This one isn’t on the bill.")}
+        description={t("The event may be a draft, private, or the link may have changed.")}
         href="/events"
-        label="See what’s on"
+        label={t("See what’s on")}
       />
     </main>
   );

@@ -4,15 +4,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { currentSession, refreshSession, signIn, useSession } from "./session-provider";
 import { Icon, LoadingPage, Notice, Poster, type PosterInfo } from "./primitives";
-import { api, type Language } from "@/lib/api";
+import { api } from "@/lib/api";
 
-/** Kazakh or Russian when the browser prefers it, otherwise English. */
-function browserLanguage(): Language {
-  if (typeof navigator === "undefined") return "en";
-  const code = navigator.language.slice(0, 2).toLowerCase();
-  return code === "kk" || code === "ru" ? code : "en";
-}
-
+import { LanguageSwitch, useT } from "@/components/language";
+import { tk, tr } from "@/lib/i18n";
 /** Only same-site paths, never back to the sign-in pages. */
 export function safeNext(next?: string) {
   return next?.startsWith("/") &&
@@ -28,47 +23,38 @@ export function safeNext(next?: string) {
 const AUTH_POSTER: PosterInfo = {
   id: "auth",
   poster: "concert",
-  title: "Your next night out",
-  city: "Almaty",
+  title: tk("Your next night out"),
+  city: tk("Almaty"),
   category: "Concerts",
   date: "2026-12-31T21:00:00+05:00",
   timeZone: "Asia/Almaty",
 };
 
 function AuthLayout({ children }: { children: ReactNode }) {
+  const t = useT();
   return (
     <main className="auth-layout">
       <div className="auth-story">
-        <p className="eyebrow">A ticket. A plan. A good night.</p>
-        <h1>
-          Be there
-          <br />
-          <em>for the good part.</em>
+        <p className="eyebrow">{t("A ticket. A plan. A good night.")}</p>
+        <h1>{t("Be there")}<br />
+          <em>{t("for the good part.")}</em>
         </h1>
         <div className="auth-poster">
-          <Poster event={AUTH_POSTER} />
+          <Poster event={{ ...AUTH_POSTER, title: t(AUTH_POSTER.title), city: t(AUTH_POSTER.city), category: t(AUTH_POSTER.category) }} />
           <div className="auth-stub">
             <Icon name="ticket" />
-            <span>
-              YOUR NEXT NIGHT OUT
-              <br />
-              <strong>Waiting to happen.</strong>
+            <span>{t("YOUR NEXT NIGHT OUT")}<br />
+              <strong>{t("Waiting to happen.")}</strong>
             </span>
             <span className="stub-number">№ 001</span>
           </div>
         </div>
-        <p className="auth-caption">
-          Made for the nights worth remembering.
-          <br />
-          Almaty & Astana.
-        </p>
+        <p className="auth-caption">{t("Made for the nights worth remembering.")}<br />{t("Almaty & Astana.")}</p>
       </div>
       <div className="auth-form-side">
         <div className="auth-form-wrap">
           <Link href="/events" className="text-link muted">
-            <Icon name="back" size={15} />
-            Back to what&apos;s on
-          </Link>
+            <Icon name="back" size={15} />{t("Back to what's on")}</Link>
           {children}
         </div>
       </div>
@@ -77,7 +63,7 @@ function AuthLayout({ children }: { children: ReactNode }) {
 }
 
 const message = (error: unknown, fallback: string) =>
-  error instanceof Error && error.message ? error.message : fallback;
+  tr(error instanceof Error && error.message ? error.message : fallback);
 
 export function AuthPage({
   register,
@@ -88,6 +74,7 @@ export function AuthPage({
   next?: string;
   initialRole?: string;
 }) {
+  const t = useT();
   const { user, ready } = useSession();
   const router = useRouter();
   const [error, setError] = useState("");
@@ -117,10 +104,10 @@ export function AuthPage({
       const name = String(data.get("name")).trim();
       if (name.length < 2 || !/^\p{L}+$/u.test(name.replace(/[ '-]/g, "")))
         return setError(
-          "Use at least two characters for your name, with letters, spaces, hyphens or apostrophes only.",
+          t("Use at least two characters for your name, with letters, spaces, hyphens or apostrophes only."),
         );
       if (password !== data.get("confirm-password"))
-        return setError("Your passwords do not match.");
+        return setError(t("Your passwords do not match."));
     }
     submitting.current = true;
     setBusy(true);
@@ -130,13 +117,13 @@ export function AuthPage({
           full_name: String(data.get("name")).trim(),
           email,
           password,
-          preferred_language: (String(data.get("language")) || "en") as Language,
+          preferred_language: t.lang,
         });
       await signIn(email, password);
       form.reset();
       goOn(register);
     } catch (error) {
-      setError(message(error, register ? "Could not create your account. Please try again." : "Could not sign you in. Please try again."));
+      setError(message(error, register ? t("Could not create your account. Please try again.") : t("Could not sign you in. Please try again.")));
     } finally {
       submitting.current = false;
       setBusy(false);
@@ -147,33 +134,26 @@ export function AuthPage({
   if (!ready) return <LoadingPage />;
   return (
     <AuthLayout>
-      <p className="eyebrow">{register ? "Make yourself at home" : "Good to see you"}</p>
-      <h2>{register ? "Start your next chapter." : "Welcome back."}</h2>
+      <p className="eyebrow">{register ? t("Make yourself at home") : t("Good to see you")}</p>
+      <h2>{register ? t("Start your next chapter.") : t("Welcome back.")}</h2>
       <p className="muted">
         {register
-          ? "A place for your tickets. Or a stage for your ideas."
-          : "Your tickets, your plans, all right here."}
+          ? t("A place for your tickets. Or a stage for your ideas.")
+          : t("Your tickets, your plans, all right here.")}
       </p>
       {user && (
-        <Notice>
-          You are signed in as {user.full_name}.{" "}
-          <Link href={safeNext(next) ?? "/orders"}>Continue</Link>
+        <Notice>{t("You are signed in as")}{" "}{user.full_name}.{" "}
+          <Link href={safeNext(next) ?? "/orders"}>{t("Continue")}</Link>
         </Notice>
       )}
       <form onSubmit={submit} className="stack-form" aria-busy={busy}>
         {register && (
-          <label>
-            Your name
-            <input name="name" autoComplete="name" placeholder="First and last name" required minLength={2} maxLength={100} disabled={busy} />
+          <label>{t("Your name")}<input name="name" autoComplete="name" placeholder={t("First and last name")} required minLength={2} maxLength={100} disabled={busy} />
           </label>
         )}
-        <label>
-          Email address
-          <input name="email" type="email" autoComplete="email" placeholder="you@example.com" required maxLength={255} disabled={busy} />
+        <label>{t("Email address")}<input name="email" type="email" autoComplete="email" placeholder={t("you@example.com")} required maxLength={255} disabled={busy} />
         </label>
-        <label>
-          Password
-          <input
+        <label>{t("Password")}<input
             name="password"
             type="password"
             autoComplete={register ? "new-password" : "current-password"}
@@ -184,41 +164,36 @@ export function AuthPage({
             aria-describedby={register ? "password-hint" : undefined}
           />
           {register && (
-            <span className="field-hint" id="password-hint">Use 8–128 characters.</span>
+            <span className="field-hint" id="password-hint">{t("Use 8–128 characters.")}</span>
           )}
         </label>
         {register && (
-          <label>
-            Confirm password
-            <input name="confirm-password" type="password" autoComplete="new-password" required minLength={8} maxLength={128} disabled={busy} />
+          <label>{t("Confirm password")}<input name="confirm-password" type="password" autoComplete="new-password" required minLength={8} maxLength={128} disabled={busy} />
           </label>
         )}
         {register && (
-          <label>
-            Language for emails and notifications
-            <select name="language" defaultValue={browserLanguage()} disabled={busy}>
-              <option value="kk">Қазақша</option>
-              <option value="ru">Русский</option>
-              <option value="en">English</option>
-            </select>
-          </label>
+          <div className="field-group">
+            <span>{t("Language")}</span>
+            <LanguageSwitch />
+            <span className="field-hint">{t("Used on the site, in the app, emails and notifications.")}</span>
+          </div>
         )}
         {!register && (
-          <Link className="text-link muted" href="/forgot-password">Forgot your password?</Link>
+          <Link className="text-link muted" href="/forgot-password">{t("Forgot your password?")}</Link>
         )}
         {error && <Notice error>{error}</Notice>}
         <button className="btn btn-primary btn-full" disabled={busy}>
-          {busy ? (register ? "Creating account…" : "Signing in…") : register ? "Create account" : "Sign in"}
+          {busy ? (register ? t("Creating account…") : t("Signing in…")) : register ? t("Create account") : t("Sign in")}
           <Icon name="arrow" size={17} />
         </button>
       </form>
       {register && (
-        <p className="field-hint">We will email you a link to confirm your address. You can book free events right away.</p>
+        <p className="field-hint">{t("We will email you a link to confirm your address. You can book free events right away.")}</p>
       )}
       <p className="auth-switch">
-        {register ? "Already have an account?" : "New around here?"}{" "}
+        {register ? t("Already have an account?") : t("New around here?")}{" "}
         <Link href={`${register ? "/sign-in" : "/register"}?${suffix.slice(1)}`}>
-          {register ? "Sign in" : "Create an account"}
+          {register ? t("Sign in") : t("Create an account")}
         </Link>
       </p>
     </AuthLayout>
@@ -226,6 +201,7 @@ export function AuthPage({
 }
 
 export function ForgotPasswordPage() {
+  const t = useT();
   const [sent, setSent] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -236,40 +212,38 @@ export function ForgotPasswordPage() {
     try {
       const email = String(new FormData(event.currentTarget).get("email")).trim().toLowerCase();
       const result = await api.auth.requestPasswordReset(email);
-      setSent(result?.detail ?? "If an account exists for this email, a reset link is on its way.");
+      setSent(result?.detail ?? t("If an account exists for this email, a reset link is on its way."));
     } catch (error) {
-      setError(message(error, "Could not send the reset link. Please try again."));
+      setError(message(error, t("Could not send the reset link. Please try again.")));
     } finally {
       setBusy(false);
     }
   }
   return (
     <AuthLayout>
-      <p className="eyebrow">Locked out?</p>
-      <h2>Reset your password.</h2>
-      <p className="muted">Enter your email and we will send you a link to choose a new password.</p>
+      <p className="eyebrow">{t("Locked out?")}</p>
+      <h2>{t("Reset your password.")}</h2>
+      <p className="muted">{t("Enter your email and we will send you a link to choose a new password.")}</p>
       {sent ? (
         <Notice>{sent}</Notice>
       ) : (
         <form onSubmit={submit} className="stack-form" aria-busy={busy}>
-          <label>
-            Email address
-            <input name="email" type="email" autoComplete="email" required maxLength={255} disabled={busy} />
+          <label>{t("Email address")}<input name="email" type="email" autoComplete="email" required maxLength={255} disabled={busy} />
           </label>
           {error && <Notice error>{error}</Notice>}
           <button className="btn btn-primary btn-full" disabled={busy}>
-            {busy ? "Sending…" : "Send reset link"} <Icon name="arrow" size={17} />
+            {busy ? t("Sending…") : t("Send reset link")} <Icon name="arrow" size={17} />
           </button>
         </form>
       )}
-      <p className="auth-switch">
-        Remembered it? <Link href="/sign-in">Sign in</Link>
+      <p className="auth-switch">{t("Remembered it?")}{" "}<Link href="/sign-in">{t("Sign in")}</Link>
       </p>
     </AuthLayout>
   );
 }
 
 export function ResetPasswordPage({ token }: { token?: string }) {
+  const t = useT();
   const router = useRouter();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -279,43 +253,38 @@ export function ResetPasswordPage({ token }: { token?: string }) {
     setError("");
     const data = new FormData(event.currentTarget);
     const password = String(data.get("password"));
-    if (password !== data.get("confirm-password")) return setError("Your passwords do not match.");
+    if (password !== data.get("confirm-password")) return setError(t("Your passwords do not match."));
     setBusy(true);
     try {
       await api.auth.confirmPasswordReset(token ?? "", password);
       setDone(true);
       setTimeout(() => router.push("/sign-in"), 2500);
     } catch (error) {
-      setError(message(error, "Could not reset your password. Please try again."));
+      setError(message(error, t("Could not reset your password. Please try again.")));
     } finally {
       setBusy(false);
     }
   }
   return (
     <AuthLayout>
-      <p className="eyebrow">Almost there</p>
-      <h2>Choose a new password.</h2>
+      <p className="eyebrow">{t("Almost there")}</p>
+      <h2>{t("Choose a new password.")}</h2>
       {!token ? (
-        <Notice error>
-          This link is missing its code. Open the link from the email again, or{" "}
-          <Link href="/forgot-password">ask for a new one</Link>.
+        <Notice error>{t("This link is missing its code. Open the link from the email again, or")}{" "}
+          <Link href="/forgot-password">{t("ask for a new one")}</Link>.
         </Notice>
       ) : done ? (
-        <Notice>Your password was changed. Taking you to sign in…</Notice>
+        <Notice>{t("Your password was changed. Taking you to sign in…")}</Notice>
       ) : (
         <form onSubmit={submit} className="stack-form" aria-busy={busy}>
-          <label>
-            New password
-            <input name="password" type="password" autoComplete="new-password" required minLength={8} maxLength={128} disabled={busy} />
-            <span className="field-hint">Use 8–128 characters. You will be signed out on other devices.</span>
+          <label>{t("New password")}<input name="password" type="password" autoComplete="new-password" required minLength={8} maxLength={128} disabled={busy} />
+            <span className="field-hint">{t("Use 8–128 characters. You will be signed out on other devices.")}</span>
           </label>
-          <label>
-            Confirm new password
-            <input name="confirm-password" type="password" autoComplete="new-password" required minLength={8} maxLength={128} disabled={busy} />
+          <label>{t("Confirm new password")}<input name="confirm-password" type="password" autoComplete="new-password" required minLength={8} maxLength={128} disabled={busy} />
           </label>
           {error && <Notice error>{error}</Notice>}
           <button className="btn btn-primary btn-full" disabled={busy}>
-            {busy ? "Saving…" : "Save new password"} <Icon name="arrow" size={17} />
+            {busy ? t("Saving…") : t("Save new password")} <Icon name="arrow" size={17} />
           </button>
         </form>
       )}
@@ -324,9 +293,10 @@ export function ResetPasswordPage({ token }: { token?: string }) {
 }
 
 export function VerifyEmailPage({ token }: { token?: string }) {
+  const t = useT();
   const { user } = useSession();
   const [state, setState] = useState<{ status: "working" | "done" | "error"; text?: string }>(
-    token ? { status: "working" } : { status: "error", text: "This link is missing its code." },
+    token ? { status: "working" } : { status: "error", text: t("This link is missing its code.") },
   );
   const started = useRef(false);
   useEffect(() => {
@@ -337,28 +307,27 @@ export function VerifyEmailPage({ token }: { token?: string }) {
         setState({ status: "done" });
         void refreshSession();
       },
-      (error: unknown) => setState({ status: "error", text: message(error, "This link could not be used.") }),
+      (error: unknown) => setState({ status: "error", text: message(error, tr("This link could not be used.")) }),
     );
   }, [token]);
   return (
     <AuthLayout>
-      <p className="eyebrow">Email address</p>
-      <h2>{state.status === "done" ? "You are confirmed." : "Confirming your email."}</h2>
-      {state.status === "working" && <Notice>Checking your link…</Notice>}
+      <p className="eyebrow">{t("Email address")}</p>
+      <h2>{state.status === "done" ? t("You are confirmed.") : t("Confirming your email.")}</h2>
+      {state.status === "working" && <Notice>{t("Checking your link…")}</Notice>}
       {state.status === "done" && (
         <>
-          <Notice>Thank you. Your email address is confirmed.</Notice>
+          <Notice>{t("Thank you. Your email address is confirmed.")}</Notice>
           <Link className="btn btn-primary btn-full" href={user ? "/events" : "/sign-in"}>
-            {user ? "Find an event" : "Sign in"} <Icon name="arrow" size={17} />
+            {user ? t("Find an event") : t("Sign in")} <Icon name="arrow" size={17} />
           </Link>
         </>
       )}
       {state.status === "error" && (
         <>
           <Notice error>{state.text}</Notice>
-          <p className="muted">
-            Links work once and expire. {user ? "Send a new one from your " : "Sign in, then send a new one from your "}
-            <Link href="/profile">profile</Link>.
+          <p className="muted">{t("Links work once and expire.")}{" "}{user ? t("Send a new one from your ") : t("Sign in, then send a new one from your ")}
+            <Link href="/profile">{t("profile")}</Link>.
           </p>
         </>
       )}

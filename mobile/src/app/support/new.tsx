@@ -9,8 +9,10 @@ import { useSession } from "@/components/session";
 import { stamp, ref } from "@/components/format";
 import { failure, useLoad } from "@/components/use-load";
 import { Button, Card, Empty, Facts, Field, H2, Intro, Loading, Notice, Screen, Select, T } from "@/components/ui";
+import { useT } from "@/lib/i18n";
 
 export default function NewSupportCase() {
+  const t = useT();
   const query = useLocalSearchParams<{ event?: string; order?: string; ticket?: string; to?: string; category?: string }>();
   const { user, organizer, ready } = useSession();
   const hasBooking = !!(query.order || query.ticket);
@@ -45,7 +47,7 @@ export default function NewSupportCase() {
   if (!user)
     return (
       <Screen>
-        <Empty icon="mail-outline" title="Sign in to ask for help." action="Sign in" onAction={() => signInFirst("/support")} />
+        <Empty icon="mail-outline" title={t("Sign in to ask for help.")} action={t("Sign in")} onAction={() => signInFirst("/support")} />
       </Screen>
     );
 
@@ -68,7 +70,7 @@ export default function NewSupportCase() {
       });
       router.replace(`/support/${created.id}`);
     } catch (e) {
-      setError(failure(e, "Could not open this support request."));
+      setError(failure(e, t("Could not open this support request.")));
       submitting.current = false;
       setBusy(false);
     }
@@ -77,7 +79,7 @@ export default function NewSupportCase() {
   if (needsBooking)
     return (
       <Screen>
-        <Intro title="Which booking is it about?" description="Attendee questions go to the team running the event, so pick the booking first." />
+        <Intro title={t("Which booking is it about?")} description={t("Attendee questions go to the team running the event, so pick the booking first.")} />
         {!context.data ? (
           <Loading />
         ) : context.data.orders.length ? (
@@ -90,9 +92,9 @@ export default function NewSupportCase() {
             </Card>
           ))
         ) : (
-          <Empty icon="mail-outline" title="No bookings yet." description="For a question about an event, use “Ask about this event” on its page." action="Browse events" onAction={() => router.replace("/")} />
+          <Empty icon="mail-outline" title={t("No bookings yet.")} description={t("For a question about an event, use “Ask about this event” on its page.")} action={t("Browse events")} onAction={() => router.replace("/")} />
         )}
-        {organizer && <Button kind="text" label="Organizer question? Write to the BiletFlow team" onPress={() => openSupport({ to: "platform" })} />}
+        {organizer && <Button kind="text" label={t("Organizer question? Write to the BiletFlow team")} onPress={() => openSupport({ to: "platform" })} />}
       </Screen>
     );
 
@@ -101,37 +103,37 @@ export default function NewSupportCase() {
   return (
     <Screen>
       <Intro
-        eyebrow="BiletFlow support"
-        title="Tell us what happened."
+        eyebrow={t("BiletFlow support")}
+        title={t("Tell us what happened.")}
         description={
           audience === "organizer"
-            ? "Ask the BiletFlow team about your account, paid-sales activation, payments or a technical issue."
-            : "Your message goes to the team running the event. The event, order and ticket are included."
+            ? t("Ask the BiletFlow team about your account, paid-sales activation, payments or a technical issue.")
+            : t("Your message goes to the team running the event. The event, order and ticket are included.")
         }
       />
-      <Select label="Issue category" value={category} onChange={setCategory} options={choices.map((c) => ({ value: c, label: CATEGORY_LABELS[c] }))} disabled={busy} />
-      <Field label="Subject" value={subject} onChangeText={setSubject} placeholder="A short description of the issue" maxLength={200} editable={!busy} />
+      <Select label={t("Issue category")} value={category} onChange={setCategory} options={choices.map((c) => ({ value: c, label: CATEGORY_LABELS[c] }))} disabled={busy} />
+      <Field label={t("Subject")} value={subject} onChangeText={setSubject} placeholder={t("A short description of the issue")} maxLength={200} editable={!busy} />
       <Field
-        label="What can we help with?"
+        label={t("What can we help with?")}
         value={body}
         onChangeText={setBody}
         multiline
         maxLength={5000}
-        placeholder="Tell us what happened and what you need."
-        hint="Up to 5,000 characters. Never share passwords or card details."
+        placeholder={t("Tell us what happened and what you need.")}
+        hint={t("Up to 5,000 characters. Never share passwords or card details.")}
         editable={!busy}
       />
       <Facts
         rows={[
-          ["From", `${user.full_name} · ${user.email}`],
-          ["Goes to", audience === "organizer" ? "BiletFlow platform support" : "The event's organizer team"],
-          ...(query.event ? ([["Event", event?.title ?? order?.event_title ?? "Event"]] as [string, string][]) : []),
-          ...(query.order ? ([["Order", ref(query.order)]] as [string, string][]) : []),
-          ...(query.ticket ? ([["Ticket", ref(query.ticket)]] as [string, string][]) : []),
+          [t("From"), `${user.full_name} · ${user.email}`],
+          [t("Goes to"), audience === "organizer" ? t("BiletFlow platform support") : t("The event's organizer team")],
+          ...(query.event ? ([[t("Event"), event?.title ?? order?.event_title ?? t("Event")]] as [string, string][]) : []),
+          ...(query.order ? ([[t("Order"), ref(query.order)]] as [string, string][]) : []),
+          ...(query.ticket ? ([[t("Ticket"), ref(query.ticket)]] as [string, string][]) : []),
         ]}
       />
       {error ? <Notice error>{error}</Notice> : null}
-      <Button label={busy ? "Opening request…" : "Open support request"} icon="arrow-forward" busy={busy} disabled={subject.trim().length < 3 || !body.trim()} onPress={submit} />
+      <Button label={busy ? t("Opening request…") : t("Open support request")} icon="arrow-forward" busy={busy} disabled={subject.trim().length < 3 || !body.trim()} onPress={submit} />
     </Screen>
   );
 }

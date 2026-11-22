@@ -20,6 +20,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { color, radius, space } from "./theme";
+import { useT } from "@/lib/i18n";
 
 export type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -146,11 +147,12 @@ export function Field({
   optional,
   ...input
 }: TextInputProps & { label: string; hint?: string; optional?: boolean }) {
+  const t = useT();
   return (
     <View style={{ gap: 6 }}>
       <Text style={s.label}>
         {label}
-        {optional ? <Text style={s.optional}>  Optional</Text> : null}
+        {optional ? <Text style={s.optional}>{" "}{t("Optional")}</Text> : null}
       </Text>
       <TextInput
         placeholderTextColor={color.muted}
@@ -164,15 +166,16 @@ export function Field({
 }
 
 export function Notice({ children, error, onDismiss }: { children: ReactNode; error?: boolean; onDismiss?: () => void }) {
+  const t = useT();
   return (
     <View
       accessibilityRole={error ? "alert" : undefined}
       style={[s.notice, error && { borderColor: color.bad, backgroundColor: "#2a1419" }]}
     >
       <Icon name={error ? "alert-circle" : "information-circle"} tint={error ? color.bad : color.gold} />
-      <View style={{ flex: 1 }}>{typeof children === "string" ? <T>{children}</T> : children}</View>
+      <View style={{ flex: 1 }}>{typeof children === "string" ? <T>{t(children)}</T> : children}</View>
       {onDismiss ? (
-        <Pressable onPress={onDismiss} accessibilityLabel="Dismiss">
+        <Pressable onPress={onDismiss} accessibilityLabel={t("Dismiss")}>
           <Icon name="close" size={16} tint={color.muted} />
         </Pressable>
       ) : null}
@@ -258,8 +261,9 @@ export function Select<V extends string>({
   onChange: (value: V) => void;
   disabled?: boolean;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
-  const current = options.find((o) => o.value === value)?.label ?? "Choose…";
+  const current = options.find((o) => o.value === value)?.label ?? t("Choose…");
   return (
     <View style={{ gap: 6 }}>
       <Text style={s.label}>{label}</Text>
@@ -317,20 +321,22 @@ export function Toggle({ label, value, onChange, hint }: { label: string; value:
   );
 }
 
-export function Loading({ label = "Loading…" }: { label?: string }) {
+export function Loading({ label }: { label?: string }) {
+  const t = useT();
   return (
     <View style={{ padding: space.xl, alignItems: "center", gap: space.sm }}>
       <ActivityIndicator color={color.ember} />
-      <T muted small>{label}</T>
+      <T muted small>{label ?? t("Loading…")}</T>
     </View>
   );
 }
 
 export function LoadError({ message, retry }: { message: string; retry?: () => void }) {
+  const t = useT();
   return (
     <Notice error>
       <T>{message}</T>
-      {retry ? <Button kind="text" small label="Try again" onPress={retry} style={{ alignSelf: "flex-start", paddingHorizontal: 0 }} /> : null}
+      {retry ? <Button kind="text" small label={t("Try again")} onPress={retry} style={{ alignSelf: "flex-start", paddingHorizontal: 0 }} /> : null}
     </Notice>
   );
 }
@@ -343,8 +349,9 @@ export function Loaded<T>({
   data: { data?: T; status: string; error?: Error; reload: () => void };
   children: (value: T) => ReactNode;
 }) {
+  const t = useT();
   if (data.status === "error" && data.data === undefined)
-    return <LoadError message={data.error?.message ?? "Could not load this."} retry={data.reload} />;
+    return <LoadError message={data.error?.message ?? t("Could not load this.")} retry={data.reload} />;
   if (data.data === undefined) return <Loading />;
   return <>{children(data.data)}</>;
 }

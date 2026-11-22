@@ -5,6 +5,7 @@
  */
 import { useSyncExternalStore } from "react";
 import { api, ApiError, client, onSignedOut, type ApiUser, type OrganizerProfile } from "@/lib/api";
+import { setLang } from "@/lib/i18n";
 
 export type StaffEvent = { id: string; title: string; my_role: string };
 
@@ -34,6 +35,8 @@ async function load() {
       snapshot = { status: "signed-out" };
     } else {
       const user = await api.users.me();
+      // The profile decides the language on every device
+      setLang(user.preferred_language);
       const [organizer, staffEvents] = await Promise.all([
         optional(() => api.organizers.me(), null),
         optional(() => api.request<StaffEvent[]>("/events/mine"), []),

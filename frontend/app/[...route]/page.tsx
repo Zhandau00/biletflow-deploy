@@ -2,22 +2,24 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { RoleApp } from "@/components/role-app";
 import { BACKEND_URL } from "@/lib/server/backend";
+import { tk } from "@/lib/i18n";
+import { serverT } from "@/lib/i18n-server";
 
 const titles: Record<string, string> = {
-  events: "What’s on",
-  "sign-in": "Welcome back",
-  register: "Create an account",
-  "forgot-password": "Reset your password",
-  "reset-password": "Choose a new password",
-  "verify-email": "Confirm your email",
-  profile: "Account profile",
-  orders: "Your tickets",
-  checkout: "Your booking",
-  organizer: "Your box office",
-  "check-in": "Check-in desk",
-  admin: "Platform administration",
-  support: "Support cases",
-  notifications: "Notifications",
+  events: tk("What’s on"),
+  "sign-in": tk("Welcome back"),
+  register: tk("Create an account"),
+  "forgot-password": tk("Reset your password"),
+  "reset-password": tk("Choose a new password"),
+  "verify-email": tk("Confirm your email"),
+  profile: tk("Account profile"),
+  orders: tk("Your tickets"),
+  checkout: tk("Your booking"),
+  organizer: tk("Your box office"),
+  "check-in": tk("Check-in desk"),
+  admin: tk("Platform administration"),
+  support: tk("Support cases"),
+  notifications: tk("Notifications"),
 };
 /** The event's title for the browser tab and link previews (public events only). */
 async function publicEvent(id: string): Promise<{ title: string; subtitle: string | null } | null> {
@@ -46,7 +48,8 @@ export async function generateMetadata({
         description: event.subtitle ?? undefined,
       };
   }
-  return { title: `${titles[route[0]] ?? "Not found"} — BiletFlow` };
+  const t = await serverT();
+  return { title: `${t(titles[route[0]] ?? tk("Not found"))} — BiletFlow` };
 }
 export default async function Page({
   params,

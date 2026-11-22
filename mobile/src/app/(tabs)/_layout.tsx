@@ -5,15 +5,17 @@ import { Icon, type IconName } from "@/components/ui";
 import { color } from "@/components/theme";
 import { useSession } from "@/components/session";
 import { useUnread } from "@/components/unread";
+import { useT } from "@/lib/i18n";
 
 function Bell() {
+  const t = useT();
   const { user } = useSession();
   const unread = useUnread();
   if (!user) return null;
   return (
     <Pressable
       onPress={() => router.push("/notifications")}
-      accessibilityLabel={unread ? `Notifications, ${unread} unread` : "Notifications"}
+      accessibilityLabel={unread ? t("Notifications, {unread} unread", { unread: unread }) : t("Notifications")}
       style={{ paddingHorizontal: 16 }}
     >
       <Icon name="notifications-outline" size={22} />
@@ -32,8 +34,9 @@ function icon(name: IconName) {
 }
 
 export default function TabsLayout() {
+  const t = useT();
   const { isAdmin, isOrganizer, canCheckIn } = useSession();
-  const workTitle = isAdmin ? "Admin" : isOrganizer ? "Organizer" : canCheckIn ? "Check-in" : "Organize";
+  const workTitle = isAdmin ? t("Admin") : isOrganizer ? t("Organizer") : canCheckIn ? "Check-in" : t("Organize");
   return (
     <Tabs
       screenOptions={{
@@ -47,11 +50,11 @@ export default function TabsLayout() {
         sceneStyle: { backgroundColor: color.ink },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: "What's on", tabBarIcon: icon("sparkles-outline") }} />
-      <Tabs.Screen name="tickets" options={{ title: "My tickets", tabBarIcon: icon("ticket-outline") }} />
+      <Tabs.Screen name="index" options={{ title: t("What's on"), tabBarIcon: icon("sparkles-outline") }} />
+      <Tabs.Screen name="tickets" options={{ title: t("My tickets"), tabBarIcon: icon("ticket-outline") }} />
       <Tabs.Screen name="work" options={{ title: workTitle, tabBarIcon: icon(isAdmin ? "shield-checkmark-outline" : "grid-outline") }} />
-      <Tabs.Screen name="support" options={{ title: "Support", tabBarIcon: icon("chatbubbles-outline") }} />
-      <Tabs.Screen name="account" options={{ title: "Account", tabBarIcon: icon("person-circle-outline") }} />
+      <Tabs.Screen name="support" options={{ title: t("Support"), tabBarIcon: icon("chatbubbles-outline") }} />
+      <Tabs.Screen name="account" options={{ title: t("Account"), tabBarIcon: icon("person-circle-outline") }} />
     </Tabs>
   );
 }

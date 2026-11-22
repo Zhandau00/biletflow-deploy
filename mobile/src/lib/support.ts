@@ -1,5 +1,7 @@
 /** Support cases and notifications as the BiletFlow backend returns them. */
 
+import { tk, translatedOptions, translatedRecord } from "./i18n";
+
 export type CaseAudience = "attendee" | "organizer";
 export type CaseStatus = "open" | "in_progress" | "waiting_for_customer" | "resolved";
 export type CaseCategory =
@@ -13,17 +15,17 @@ export type CaseCategory =
   | "activation"
   | "technical";
 
-export const CATEGORY_LABELS: Record<CaseCategory, string> = {
-  ticket_delivery: "Ticket delivery",
-  payment: "Payment",
-  refund: "Refund",
-  seating: "Seating",
-  event_information: "Event information",
-  check_in: "Check-in",
-  account: "Account",
-  activation: "Paid sales activation",
-  technical: "Technical problem",
-};
+export const CATEGORY_LABELS: Record<CaseCategory, string> = translatedRecord({
+  ticket_delivery: tk("Ticket delivery"),
+  payment: tk("Payment"),
+  refund: tk("Refund"),
+  seating: tk("Seating"),
+  event_information: tk("Event information"),
+  check_in: tk("Check-in"),
+  account: tk("Account"),
+  activation: tk("Paid sales activation"),
+  technical: tk("Technical problem"),
+});
 
 /** Same lists as the backend (SRS 4.13). */
 export const CATEGORIES_BY_AUDIENCE: Record<CaseAudience, CaseCategory[]> = {
@@ -31,12 +33,12 @@ export const CATEGORIES_BY_AUDIENCE: Record<CaseAudience, CaseCategory[]> = {
   organizer: ["account", "activation", "payment", "technical"],
 };
 
-export const STATUS_OPTIONS: { value: CaseStatus; label: string }[] = [
-  { value: "open", label: "Open" },
-  { value: "in_progress", label: "In Progress" },
-  { value: "waiting_for_customer", label: "Waiting for Customer" },
-  { value: "resolved", label: "Resolved" },
-];
+export const STATUS_OPTIONS: { value: CaseStatus; label: string }[] = translatedOptions([
+  { value: "open", label: tk("Open") },
+  { value: "in_progress", label: tk("In Progress") },
+  { value: "waiting_for_customer", label: tk("Waiting for Customer") },
+  { value: "resolved", label: tk("Resolved") },
+]);
 
 export type CaseSummary = {
   id: string;

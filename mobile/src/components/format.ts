@@ -1,6 +1,8 @@
 /** Date and money formatting shared by the screens (Almaty time, tenge). */
+
+import { formatDate, getLang } from "@/lib/i18n";
 export const stamp = (value: string) =>
-  new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Almaty" }).format(new Date(value));
+  formatDate(getLang(), new Date(value), { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Almaty" });
 
 export const amount = (value: number) => `₸${value.toLocaleString("en-US")}`;
 

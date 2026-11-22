@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { tr } from "@/lib/i18n";
 
 export type Loaded<T> =
   | { status: "loading"; data?: T }
@@ -25,7 +26,7 @@ export function useLoad<T>(key: string, load: (signal: AbortSignal) => Promise<T
       (data) => setState({ status: "ready", data, key }),
       (error: unknown) => {
         if (controller.signal.aborted) return;
-        const failure = error instanceof Error ? error : new Error("Something went wrong.");
+        const failure = error instanceof Error ? error : new Error(tr("Something went wrong."));
         const httpStatus =
           typeof (error as { status?: unknown })?.status === "number"
             ? (error as { status: number }).status

@@ -10,11 +10,13 @@ import { recheckUnread } from "@/components/unread";
 import { failure, useLoad } from "@/components/use-load";
 import { Button, Card, Empty, Intro, LoadError, Loading, Notice, Row, Screen, T, Toggle } from "@/components/ui";
 import { color } from "@/components/theme";
+import { formatDate, getLang, useT } from "@/lib/i18n";
 
 const stamp = (value: string) =>
-  new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Almaty" }).format(new Date(value));
+  formatDate(getLang(), new Date(value), { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Almaty" });
 
 export default function Notifications() {
+  const t = useT();
   const { user, ready } = useSession();
   const [version, setVersion] = useState(0);
   const [onlyUnread, setOnlyUnread] = useState(false);
@@ -32,7 +34,7 @@ export default function Notifications() {
       setVersion((v) => v + 1);
       void recheckUnread();
     } catch (e) {
-      setError(failure(e, "Could not update notifications."));
+      setError(failure(e, t("Could not update notifications.")));
     }
   }
 
@@ -45,16 +47,16 @@ export default function Notifications() {
   if (!user)
     return (
       <Screen>
-        <Empty icon="notifications-outline" title="Nothing to miss here." description="Sign in to see updates about your tickets, events and support cases." action="Sign in" onAction={() => signInFirst("/notifications")} />
+        <Empty icon="notifications-outline" title={t("Nothing to miss here.")} description={t("Sign in to see updates about your tickets, events and support cases.")} action={t("Sign in")} onAction={() => signInFirst("/notifications")} />
       </Screen>
     );
   const items = list.data ?? [];
   const unread = items.filter((n) => !n.is_read).length;
   return (
     <Screen onRefresh={() => setVersion((v) => v + 1)} refreshing={list.refreshing}>
-      <Intro eyebrow="Keeping you posted" title="Notifications." description="Order, event and support updates, in the language set on your profile. Most of them also come by email." />
-      <Toggle label="Only unread" value={onlyUnread} onChange={setOnlyUnread} />
-      {unread > 0 && <Button kind="secondary" icon="checkmark-done" label="Mark all read" onPress={() => act("/notifications/read-all")} />}
+      <Intro eyebrow={t("Keeping you posted")} title={t("Notifications.")} description={t("Order, event and support updates, in the language set on your profile. Most of them also come by email.")} />
+      <Toggle label={t("Only unread")} value={onlyUnread} onChange={setOnlyUnread} />
+      {unread > 0 && <Button kind="secondary" icon="checkmark-done" label={t("Mark all read")} onPress={() => act("/notifications/read-all")} />}
       {error ? <Notice error>{error}</Notice> : null}
       {list.status === "error" && <LoadError message={list.error.message} retry={list.reload} />}
       {!list.data ? (
@@ -78,7 +80,7 @@ export default function Notifications() {
                 </T>
                 {!n.is_read && (
                   <View>
-                    <Button small kind="text" label="Mark read" onPress={() => act(`/notifications/${n.id}/read`)} />
+                    <Button small kind="text" label={t("Mark read")} onPress={() => act(`/notifications/${n.id}/read`)} />
                   </View>
                 )}
               </Row>
@@ -86,7 +88,7 @@ export default function Notifications() {
           );
         })
       ) : (
-        <Empty icon="notifications-outline" title={onlyUnread ? "All caught up." : "No notifications yet."} description="Updates about your orders, events and support cases appear here." />
+        <Empty icon="notifications-outline" title={onlyUnread ? t("All caught up.") : t("No notifications yet.")} description={t("Updates about your orders, events and support cases appear here.")} />
       )}
     </Screen>
   );

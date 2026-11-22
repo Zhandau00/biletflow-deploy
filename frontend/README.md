@@ -58,7 +58,13 @@ Scan with a USB/Bluetooth scanner (it types the code), paste a code, or use the 
 
 ## Support and notifications
 
-Attendee cases go to the event's owner, managers and support staff, who can pass them to the platform team. Organizer cases go straight to the platform team. Threads poll for replies every 20 seconds and every reply also arrives by email. The header bell shows unread notifications (checked once a minute); notifications use the language chosen at sign-up or on the profile page (Kazakh, Russian or English). The interface itself is in English.
+Attendee cases go to the event's owner, managers and support staff, who can pass them to the platform team. Organizer cases go straight to the platform team. Threads poll for replies every 20 seconds and every reply also arrives by email. The header bell shows unread notifications (checked once a minute); notifications use the account's language.
+
+## Languages
+
+The attendee side of the site (home page, events, checkout, tickets, account, sign-in, support and notifications) is in Kazakh, Russian and English, as the SRS asks. The ҚАЗ / РУС / ENG switch in the header changes it straight away; it is kept in the `biletflow-lang` cookie, so the server renders pages in it, and for a signed-in account it is also saved as the profile language, which emails, notifications and the mobile app use. Without a choice the browser's language decides. The organizer workspace, check-in desk and admin pages stay in English.
+
+Text is written in English inside `t("…")` (`components/language.tsx` for client components, `lib/i18n-server.ts` for server ones). The Russian and Kazakh versions are in `locales/ru.json` and `locales/kk.json`, keyed by the English text; `{name}` marks a value filled in at runtime, and counted text uses `t.plural(n, "{n} ticket", "{n} tickets")` with the Russian forms one|few|many. `tests/i18n.test.ts` fails when a text has no translation or a translation drops a placeholder. Kazakh dates are put together in `lib/i18n.ts`, because many browsers lack Kazakh month names.
 
 ## Structure
 

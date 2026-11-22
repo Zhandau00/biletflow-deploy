@@ -23,6 +23,7 @@ import { useSession } from "@/components/session";
 import { failure, useLoad } from "@/components/use-load";
 import { Avatar, Button, Card, Empty, Eyebrow, Field, H1, H2, Icon, LoadError, Loading, Notice, Row, Screen, T } from "@/components/ui";
 import { color } from "@/components/theme";
+import { useT } from "@/lib/i18n";
 
 type Details = { event: ApiEvent; tickets: TicketType[]; organizer: string; images: string[] };
 
@@ -40,6 +41,7 @@ async function loadEvent(id: string, signal: AbortSignal): Promise<Details> {
 }
 
 export default function EventScreen() {
+  const t = useT();
   const { id, promo } = useLocalSearchParams<{ id: string; promo?: string }>();
   const details = useLoad(`event-${id}`, (signal) =>
     /^[0-9a-f-]{36}$/i.test(id) ? loadEvent(id, signal) : Promise.reject(new ApiError("Event not found", 404)),
@@ -47,7 +49,7 @@ export default function EventScreen() {
   if (details.status === "error" && (details.httpStatus === 404 || details.httpStatus === 422))
     return (
       <Screen>
-        <Empty title="This one isn’t on the bill." description="The event may be a draft, private, or the link may have changed." action="See what’s on" onAction={() => router.replace("/")} />
+        <Empty title={t("This one isn’t on the bill.")} description={t("The event may be a draft, private, or the link may have changed.")} action={t("See what’s on")} onAction={() => router.replace("/")} />
       </Screen>
     );
   if (details.status === "error" && !details.data)
@@ -74,6 +76,7 @@ function EventView({
   reload,
   refreshing,
 }: Details & { promoToken?: string; reload: () => void; refreshing: boolean }) {
+  const t = useT();
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [promo, setPromo] = useState<{ label: string; name: string } | null>(null);
   const [now] = useState(Date.now);
@@ -104,10 +107,10 @@ function EventView({
   return (
     <Screen onRefresh={reload} refreshing={refreshing}>
       <Stack.Screen options={{ title: event.title }} />
-      {cancelled && <Notice error>This event has been cancelled. Ticket holders are refunded automatically and were told by email.</Notice>}
-      {ended && <Notice>This event has ended.</Notice>}
-      {event.lifecycle === "active" && <Notice>Happening now.</Notice>}
-      {event.lifecycle === "draft" && <Notice>Draft preview — only the event team can see this page until it is published.</Notice>}
+      {cancelled && <Notice error>{t("This event has been cancelled. Ticket holders are refunded automatically and were told by email.")}</Notice>}
+      {ended && <Notice>{t("This event has ended.")}</Notice>}
+      {event.lifecycle === "active" && <Notice>{t("Happening now.")}</Notice>}
+      {event.lifecycle === "draft" && <Notice>{t("Draft preview — only the event team can see this page until it is published.")}</Notice>}
       <Poster event={posterInfo(event)} />
       <Eyebrow>
         {categoryLabel(event.category)}
@@ -133,8 +136,8 @@ function EventView({
         <Row wrap={false} style={{ alignItems: "flex-start" }}>
           <Icon name="location-outline" tint={color.ember} />
           <View style={{ flex: 1 }}>
-            <T bold>{event.venue_name ?? "Venue to be announced"}</T>
-            <T small muted>{[event.venue_address, event.city].filter(Boolean).join(", ") || "Kazakhstan"}</T>
+            <T bold>{event.venue_name ?? t("Venue to be announced")}</T>
+            <T small muted>{[event.venue_address, event.city].filter(Boolean).join(", ") || t("Kazakhstan")}</T>
           </View>
         </Row>
         <Row>
@@ -143,7 +146,7 @@ function EventView({
               small
               kind="secondary"
               icon="map-outline"
-              label="Map"
+              label={t("Map")}
               onPress={() => openLink(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`)}
             />
           ) : null}
@@ -153,25 +156,25 @@ function EventView({
 
       <Card>
         <Row style={{ justifyContent: "space-between" }}>
-          <Eyebrow>Save your place</Eyebrow>
+          <Eyebrow>{t("Save your place")}</Eyebrow>
           <Icon name="ticket-outline" tint={color.ember} />
         </Row>
-        <H2>See you there.</H2>
-        <T muted>{assigned ? "Numbered seats: pick yours on the seat map." : "Choose your tickets. Bring your people."}</T>
-        {tickets.length === 0 && <T muted>Tickets have not been released yet.</T>}
-        {tickets.map((t) => {
-          const block = blocks[t.id];
-          const quantity = quantities[t.id] ?? 0;
-          const limit = Math.min(t.max_per_order, t.available);
+        <H2>{t("See you there.")}</H2>
+        <T muted>{assigned ? t("Numbered seats: pick yours on the seat map.") : t("Choose your tickets. Bring your people.")}</T>
+        {tickets.length === 0 && <T muted>{t("Tickets have not been released yet.")}</T>}
+        {tickets.map((type) => {
+          const block = blocks[type.id];
+          const quantity = quantities[type.id] ?? 0;
+          const limit = Math.min(type.max_per_order, type.available);
           return (
-            <View key={t.id} style={{ borderTopWidth: 1, borderTopColor: color.line, paddingTop: 12, gap: 6 }}>
+            <View key={type.id} style={{ borderTopWidth: 1, borderTopColor: color.line, paddingTop: 12, gap: 6 }}>
               <Row style={{ justifyContent: "space-between", alignItems: "flex-start" }} wrap={false}>
                 <View style={{ flex: 1 }}>
-                  <T bold>{t.name}</T>
-                  {t.description ? <T small muted>{t.description}</T> : null}
-                  <T small muted>{block ?? (t.available <= 10 ? `Only ${t.available} left` : `${t.available} available`)}</T>
+                  <T bold>{type.name}</T>
+                  {type.description ? <T small muted>{type.description}</T> : null}
+                  <T small muted>{block ?? (type.available <= 10 ? t("Only {available} left", { available: type.available }) : t("{available} available", { available: type.available }))}</T>
                 </View>
-                <T bold>{price(t.price_kzt)}</T>
+                <T bold>{price(type.price_kzt)}</T>
               </Row>
               {!assigned && (
                 <Row style={{ justifyContent: "flex-end" }}>
@@ -181,7 +184,7 @@ function EventView({
                     icon="remove"
                     label=""
                     disabled={!quantity}
-                    onPress={() => setQuantities((q) => ({ ...q, [t.id]: Math.max(0, (q[t.id] ?? 0) - 1) }))}
+                    onPress={() => setQuantities((q) => ({ ...q, [type.id]: Math.max(0, (q[type.id] ?? 0) - 1) }))}
                   />
                   <T bold style={{ minWidth: 24, textAlign: "center" }}>
                     {quantity}
@@ -192,7 +195,7 @@ function EventView({
                     icon="add"
                     label=""
                     disabled={!!block || quantity >= limit}
-                    onPress={() => setQuantities((q) => ({ ...q, [t.id]: Math.min(limit, (q[t.id] ?? 0) + 1) }))}
+                    onPress={() => setQuantities((q) => ({ ...q, [type.id]: Math.min(limit, (q[type.id] ?? 0) + 1) }))}
                   />
                 </Row>
               )}
@@ -201,72 +204,68 @@ function EventView({
         })}
         <Row style={{ justifyContent: "space-between", borderTopWidth: 1, borderTopColor: color.line, paddingTop: 12 }}>
           <T>
-            {count} {count === 1 ? "ticket" : "tickets"}
+            {t.plural(count, "{n} ticket", "{n} tickets")}
           </T>
           <T bold style={{ fontSize: 18 }}>
             {count ? price(total) : "—"}
           </T>
         </Row>
-        {promo && <Notice>{`${promo.label} with ${promo.name} — applied at checkout.`}</Notice>}
+        {promo && <Notice>{t("{label} with {name} — applied at checkout.", { label: promo.label, name: promo.name })}</Notice>}
         {assigned && !cancelled && !ended ? (
-          <Button label="Choose your seats" icon="arrow-forward" disabled={!tickets.some((t) => !blocks[t.id])} onPress={checkout} />
+          <Button label={t("Choose your seats")} icon="arrow-forward" disabled={!tickets.some((t) => !blocks[t.id])} onPress={checkout} />
         ) : (
           <Button
             label={
               count
                 ? total
-                  ? "Continue to checkout"
-                  : "Register for free"
+                  ? t("Continue to checkout")
+                  : t("Register for free")
                 : cancelled
-                  ? "Event cancelled"
+                  ? t("Event cancelled")
                   : ended
-                    ? "This event has ended"
-                    : "Choose your tickets"
+                    ? t("This event has ended")
+                    : t("Choose your tickets")
             }
             icon={count ? "arrow-forward" : undefined}
             disabled={!count}
             onPress={checkout}
           />
         )}
-        <T small muted>
-          Your places are held for 10 minutes while you check out.
-        </T>
+        <T small muted>{t("Your places are held for 10 minutes while you check out.")}</T>
       </Card>
 
-      <H2>A little about the event</H2>
-      <T>{event.description || "The organizer has not added a description yet."}</T>
+      <H2>{t("A little about the event")}</H2>
+      <T>{event.description || t("The organizer has not added a description yet.")}</T>
       {extraImages.map((url) => (
         <Image key={url} source={{ uri: url }} style={{ width: "100%", height: 200, borderRadius: 14 }} contentFit="cover" />
       ))}
       <Card>
-        <Eyebrow>Good to know</Eyebrow>
-        <T>
-          Each ticket admits one person and has its own QR code. Keep it on your phone or save the PDF.
-          {assigned ? " This event has numbered seats; you choose them at checkout." : ""}
+        <Eyebrow>{t("Good to know")}</Eyebrow>
+        <T>{t("Each ticket admits one person and has its own QR code. Keep it on your phone or save the PDF.")}
+          {assigned ? t(" This event has numbered seats; you choose them at checkout.") : ""}
         </T>
         {event.refund_policy ? (
           <>
-            <Eyebrow>Refunds</Eyebrow>
+            <Eyebrow>{t("Refunds")}</Eyebrow>
             <T>{event.refund_policy}</T>
           </>
         ) : null}
       </Card>
       <Row>
-        <Avatar name={organizer || "Organizer"} />
+        <Avatar name={organizer || t("Organizer")} />
         <View>
-          <T small muted>
-            Put together by
-          </T>
-          <T>{organizer || "Independent organizer"}</T>
+          <T small muted>{t("Put together by")}</T>
+          <T>{organizer || t("Independent organizer")}</T>
         </View>
       </Row>
-      <Button kind="secondary" icon="mail-outline" label="Ask about this event" onPress={() => openSupport({ event: event.id })} />
+      <Button kind="secondary" icon="mail-outline" label={t("Ask about this event")} onPress={() => openSupport({ event: event.id })} />
       <EventReport eventId={event.id} />
     </Screen>
   );
 }
 
 function CalendarButtons({ eventId }: { eventId: string }) {
+  const t = useT();
   const [error, setError] = useState("");
   async function google() {
     setError("");
@@ -274,7 +273,7 @@ function CalendarButtons({ eventId }: { eventId: string }) {
       const links = await api.events.calendarLinks(eventId);
       await openLink(links.google);
     } catch (e) {
-      setError(failure(e, "Calendar links are not available."));
+      setError(failure(e, t("Calendar links are not available.")));
     }
   }
   async function file() {
@@ -282,13 +281,13 @@ function CalendarButtons({ eventId }: { eventId: string }) {
     try {
       await shareFile(api.events.calendarFile(eventId), "event.ics");
     } catch (e) {
-      setError(failure(e, "Could not get the calendar file."));
+      setError(failure(e, t("Could not get the calendar file.")));
     }
   }
   return (
     <>
-      <Button small kind="secondary" icon="calendar-outline" label="Google Calendar" onPress={google} />
-      <Button small kind="secondary" icon="download-outline" label="Calendar file" onPress={file} />
+      <Button small kind="secondary" icon="calendar-outline" label={t("Google Calendar")} onPress={google} />
+      <Button small kind="secondary" icon="download-outline" label={t("Calendar file")} onPress={file} />
       {error ? (
         <T small style={{ color: color.bad }}>
           {error}
@@ -299,22 +298,23 @@ function CalendarButtons({ eventId }: { eventId: string }) {
 }
 
 function EventReport({ eventId }: { eventId: string }) {
+  const t = useT();
   const { user } = useSession();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [feedback, setFeedback] = useState<{ message: string; error: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
   if (!open)
-    return <Button kind="text" label="Report this event" onPress={() => (user ? setOpen(true) : signInFirst(`/event/${eventId}`))} />;
+    return <Button kind="text" label={t("Report this event")} onPress={() => (user ? setOpen(true) : signInFirst(`/event/${eventId}`))} />;
   async function submit() {
     setBusy(true);
     setFeedback(null);
     try {
       await api.request(`/events/${eventId}/reports`, { body: { reason: reason.trim() } });
-      setFeedback({ message: "Thank you. The BiletFlow team will review this event.", error: false });
+      setFeedback({ message: t("Thank you. The BiletFlow team will review this event."), error: false });
       setReason("");
     } catch (e) {
-      setFeedback({ message: failure(e, "Could not send the report."), error: true });
+      setFeedback({ message: failure(e, t("Could not send the report.")), error: true });
     } finally {
       setBusy(false);
     }
@@ -322,17 +322,17 @@ function EventReport({ eventId }: { eventId: string }) {
   return (
     <Card>
       <Field
-        label="What should the platform review?"
+        label={t("What should the platform review?")}
         multiline
         value={reason}
         onChangeText={setReason}
         maxLength={1000}
-        placeholder="Misleading information, a suspected scam, a safety concern…"
-        hint="At least 10 characters."
+        placeholder={t("Misleading information, a suspected scam, a safety concern…")}
+        hint={t("At least 10 characters.")}
       />
       <Row>
-        <Button kind="secondary" label="Send report" busy={busy} disabled={reason.trim().length < 10} onPress={submit} />
-        <Button kind="text" label="Close" onPress={() => setOpen(false)} />
+        <Button kind="secondary" label={t("Send report")} busy={busy} disabled={reason.trim().length < 10} onPress={submit} />
+        <Button kind="text" label={t("Close")} onPress={() => setOpen(false)} />
       </Row>
       {feedback && <Notice error={feedback.error}>{feedback.message}</Notice>}
     </Card>

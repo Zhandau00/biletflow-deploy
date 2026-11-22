@@ -26,22 +26,26 @@ import {
 import { useSession } from "./session-provider";
 import { useLoad } from "./use-load";
 import { EmptyState, Icon, LoadingPage, Notice, PageIntro } from "./primitives";
+import { useT } from "@/components/language";
+import { formatDate, getLang, tk, tr } from "@/lib/i18n";
 import "./support.css";
 
 const stamp = (value: string) =>
-  new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Almaty" }).format(new Date(value));
+  formatDate(getLang(), new Date(value), { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Almaty" });
 
-const failure = (error: unknown, fallback = "That did not work. Please try again.") =>
-  error instanceof Error && error.message ? error.message : fallback;
+const failure = (error: unknown, fallback = tk("That did not work. Please try again.")) =>
+  tr(error instanceof Error && error.message ? error.message : fallback);
 
 function CaseBadge({ status, label }: { status: string; label: string }) {
-  return <span className={`support-status support-status-${status.replaceAll("_", "-")}`}>{label}</span>;
+  const t = useT();
+  return <span className={`support-status support-status-${status.replaceAll("_", "-")}`}>{t(label)}</span>;
 }
 
 function SupportShell({ children, title, description, action }: { children: ReactNode; title: string; description: string; action?: ReactNode }) {
+  const t = useT();
   return (
     <main className="workspace support-workspace">
-      <PageIntro eyebrow="BiletFlow support" title={title} description={description} action={action} />
+      <PageIntro eyebrow={t("BiletFlow support")} title={title} description={description} action={action} />
       {children}
     </main>
   );
@@ -53,7 +57,7 @@ export function SupportLink({
   orderId,
   ticketId,
   platform = false,
-  label = "Get support",
+  label,
 }: {
   eventId?: string;
   orderId?: string;
@@ -61,6 +65,7 @@ export function SupportLink({
   platform?: boolean;
   label?: string;
 }) {
+  const t = useT();
   const query = new URLSearchParams();
   if (eventId) query.set("event", eventId);
   if (orderId) query.set("order", orderId);
@@ -70,12 +75,13 @@ export function SupportLink({
   return (
     <Link className="btn btn-secondary support-launch" href={`/support/new${suffix ? `?${suffix}` : ""}`}>
       <Icon name="mail" size={16} />
-      {label}
+      {label ?? t("Get support")}
     </Link>
   );
 }
 
 function SupportInbox() {
+  const t = useT();
   const { user, organizer, isAdmin } = useSession();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
@@ -89,37 +95,29 @@ function SupportInbox() {
   );
   return (
     <SupportShell
-      title="A little help, a better night."
-      description="Your requests and the cases your team answers. Replies stay here, and you get an email and a notification when someone answers."
+      title={t("A little help, a better night.")}
+      description={t("Your requests and the cases your team answers. Replies stay here, and you get an email and a notification when someone answers.")}
       action={
         !isAdmin && (
           <Link className="btn btn-primary" href={organizer ? "/support/new?to=platform" : "/support/new"}>
-            <Icon name="plus" size={16} />
-            New support request
-          </Link>
+            <Icon name="plus" size={16} />{t("New support request")}</Link>
         )
       }
     >
       <div className="support-filters">
-        <label className="support-search">
-          Search cases
-          <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Subject, reference, event or requester" />
+        <label className="support-search">{t("Search cases")}<input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("Subject, reference, event or requester")} />
         </label>
-        <label>
-          Status
-          <select value={status} onChange={(e) => setStatus(e.target.value)}>
-            <option value="">All statuses</option>
+        <label>{t("Status")}<select value={status} onChange={(e) => setStatus(e.target.value)}>
+            <option value="">{t("All statuses")}</option>
             {STATUS_OPTIONS.map((s) => (
               <option key={s.value} value={s.value}>{s.label}</option>
             ))}
           </select>
         </label>
-        <label>
-          Show
-          <select value={scope} onChange={(e) => setScope(e.target.value)}>
-            <option value="all">Everything I can see</option>
-            <option value="requested">Requests I opened</option>
-            <option value="handling">Cases I answer</option>
+        <label>{t("Show")}<select value={scope} onChange={(e) => setScope(e.target.value)}>
+            <option value="all">{t("Everything I can see")}</option>
+            <option value="requested">{t("Requests I opened")}</option>
+            <option value="handling">{t("Cases I answer")}</option>
           </select>
         </label>
       </div>
@@ -129,7 +127,7 @@ function SupportInbox() {
       ) : (
         <>
           <p className="support-results" role="status">
-            {list.length} {list.length === 1 ? "case" : "cases"}
+            {t.plural(list.length, "{n} case", "{n} cases")}
           </p>
           {list.length ? (
             <div className="support-case-list">
@@ -139,20 +137,20 @@ function SupportInbox() {
                     <div className="support-case-meta">
                       <span>{caseRef(c.id)}</span>
                       <span>{CATEGORY_LABELS[c.category] ?? c.category}</span>
-                      {c.is_escalated && <span className="support-escalated">Escalated</span>}
+                      {c.is_escalated && <span className="support-escalated">{t("Escalated")}</span>}
                     </div>
                     <h2>{c.subject}</h2>
                     <p>
-                      {c.requester_user_id === user?.id ? "You" : c.requester_name} ·{" "}
-                      {c.audience === "organizer" ? "Platform support" : c.event_title ?? "Event support"}
-                      {c.assignee_name ? ` · Assigned to ${c.assignee_name}` : " · Unassigned"}
+                      {c.requester_user_id === user?.id ? t("You") : c.requester_name} ·{" "}
+                      {c.audience === "organizer" ? t("Platform support") : c.event_title ?? t("Event support")}
+                      {c.assignee_name ? t(" · Assigned to {assignee_name}", { assignee_name: c.assignee_name }) : t(" · Unassigned")}
                     </p>
                   </div>
                   <div className="support-case-side">
                     <CaseBadge status={c.status} label={c.status_label} />
                     <time dateTime={c.updated_at}>{stamp(c.updated_at)}</time>
                     <span>
-                      {c.message_count} {c.message_count === 1 ? "message" : "messages"}
+                      {t.plural(c.message_count, "{n} message", "{n} messages")}
                       <Icon name="arrow" size={15} />
                     </span>
                   </div>
@@ -162,11 +160,11 @@ function SupportInbox() {
           ) : (
             <EmptyState
               icon="mail"
-              title={cases.data.length ? "No matching cases." : "Your inbox is clear."}
+              title={cases.data.length ? t("No matching cases.") : t("Your inbox is clear.")}
               description={
                 cases.data.length
-                  ? "Try a different status or search."
-                  : "Open a request from an event, order or ticket page when you need a hand."
+                  ? t("Try a different status or search.")
+                  : t("Open a request from an event, order or ticket page when you need a hand.")
               }
             />
           )}
@@ -177,6 +175,7 @@ function SupportInbox() {
 }
 
 function NewSupportCase({ query }: { query: Record<string, string> }) {
+  const t = useT();
   const { user, organizer } = useSession();
   const router = useRouter();
   const [error, setError] = useState("");
@@ -218,7 +217,7 @@ function NewSupportCase({ query }: { query: Record<string, string> }) {
       });
       router.push(`/support/${created.id}`);
     } catch (err) {
-      setError(failure(err, "Could not open this support request."));
+      setError(failure(err, t("Could not open this support request.")));
       submitting.current = false;
       setBusy(false);
     }
@@ -226,13 +225,11 @@ function NewSupportCase({ query }: { query: Record<string, string> }) {
 
   const back = (
     <Link className="text-link" href="/support">
-      <Icon name="back" size={16} />
-      All support cases
-    </Link>
+      <Icon name="back" size={16} />{t("All support cases")}</Link>
   );
   if (needsBooking)
     return (
-      <SupportShell title="Which booking is it about?" description="Attendee questions go to the team running the event, so pick the booking first." action={back}>
+      <SupportShell title={t("Which booking is it about?")} description={t("Attendee questions go to the team running the event, so pick the booking first.")} action={back}>
         {!context.data ? (
           <LoadingPage />
         ) : context.data.orders.length ? (
@@ -253,11 +250,10 @@ function NewSupportCase({ query }: { query: Record<string, string> }) {
             ))}
           </div>
         ) : (
-          <EmptyState icon="mail" title="No bookings yet." description="For a question about an event, use “Ask about this event” on its page." href="/events" label="Browse events" />
+          <EmptyState icon="mail" title={t("No bookings yet.")} description={t("For a question about an event, use “Ask about this event” on its page.")} href="/events" label={t("Browse events")} />
         )}
         {organizer && (
-          <p className="muted">
-            Organizer question? <Link className="text-link" href="/support/new?to=platform">Write to the BiletFlow team</Link>.
+          <p className="muted">{t("Organizer question?")}{" "}<Link className="text-link" href="/support/new?to=platform">{t("Write to the BiletFlow team")}</Link>.
           </p>
         )}
       </SupportShell>
@@ -267,73 +263,67 @@ function NewSupportCase({ query }: { query: Record<string, string> }) {
   const order = context.data?.order;
   return (
     <SupportShell
-      title="Tell us what happened."
+      title={t("Tell us what happened.")}
       description={
         audience === "organizer"
-          ? "Ask the BiletFlow team about your account, paid-sales activation, payments or a technical issue."
-          : "Your message goes to the team running the event. The event, order and ticket are included."
+          ? t("Ask the BiletFlow team about your account, paid-sales activation, payments or a technical issue.")
+          : t("Your message goes to the team running the event. The event, order and ticket are included.")
       }
       action={back}
     >
       <div className="support-compose-layout">
         <form className="stack-form support-compose" onSubmit={submit} aria-busy={busy}>
-          <label>
-            Issue category
-            <select name="category" defaultValue={initial} required disabled={busy}>
+          <label>{t("Issue category")}<select name="category" defaultValue={initial} required disabled={busy}>
               {choices.map((c) => (
                 <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
               ))}
             </select>
           </label>
-          <label>
-            Subject
-            <input name="subject" placeholder="A short description of the issue" minLength={3} maxLength={200} required disabled={busy} />
+          <label>{t("Subject")}<input name="subject" placeholder={t("A short description of the issue")} minLength={3} maxLength={200} required disabled={busy} />
           </label>
-          <label>
-            What can we help with?
-            <textarea name="body" placeholder="Tell us what happened and what you need." rows={7} minLength={1} maxLength={5000} required disabled={busy} />
-            <span className="field-hint">Up to 5,000 characters. Never share passwords or card details.</span>
+          <label>{t("What can we help with?")}<textarea name="body" placeholder={t("Tell us what happened and what you need.")} rows={7} minLength={1} maxLength={5000} required disabled={busy} />
+            <span className="field-hint">{t("Up to 5,000 characters. Never share passwords or card details.")}</span>
           </label>
           {error && <Notice error>{error}</Notice>}
           <button className="btn btn-primary" disabled={busy}>
-            {busy ? "Opening request…" : "Open support request"}
+            {busy ? t("Opening request…") : t("Open support request")}
             <Icon name="arrow" size={16} />
           </button>
         </form>
-        <section className="support-context" aria-label="Included with this request">
-          <h2>Included with this request</h2>
+        <section className="support-context" aria-label={t("Included with this request")}>
+          <h2>{t("Included with this request")}</h2>
           <dl>
             <div>
-              <dt>From</dt>
+              <dt>{t("From")}</dt>
               <dd>
                 {user?.full_name}
                 <small>{user?.email}</small>
               </dd>
             </div>
             <div>
-              <dt>Goes to</dt>
-              <dd>{audience === "organizer" ? "BiletFlow platform support" : "The event's organizer team"}</dd>
+              <dt>{t("Goes to")}</dt>
+              <dd>{audience === "organizer" ? t("BiletFlow platform support") : t("The event's organizer team")}</dd>
             </div>
             {query.event && (
               <div>
-                <dt>Event</dt>
-                <dd>{event?.title ?? order?.event_title ?? "Event"}</dd>
+                <dt>{t("Event")}</dt>
+                <dd>{event?.title ?? order?.event_title ?? t("Event")}</dd>
               </div>
             )}
             {query.order && (
               <div>
-                <dt>Order</dt>
+                <dt>{t("Order")}</dt>
                 <dd>{query.order.slice(0, 8).toUpperCase()}</dd>
               </div>
             )}
             {query.ticket && (
               <div>
-                <dt>Ticket</dt>
+                <dt>{t("Ticket")}</dt>
                 <dd>{query.ticket.slice(0, 8).toUpperCase()}</dd>
               </div>
             )}
           </dl>
-          <p>These references stay with the conversation.</p>
+          <p>{t("These references stay with the conversation.")}</p>
         </section>
       </div>
     </SupportShell>
@@ -341,6 +331,7 @@ function NewSupportCase({ query }: { query: Record<string, string> }) {
 }
 
 function CaseThread({ id }: { id: string }) {
+  const t = useT();
   const { user, isAdmin } = useSession();
   const [version, setVersion] = useState(0);
   const [notice, setNotice] = useState<{ text: string; error: boolean } | null>(null);
@@ -383,8 +374,8 @@ function CaseThread({ id }: { id: string }) {
 
   if (data.status === "error" && !sc)
     return (
-      <SupportShell title="Case unavailable." description="This case does not exist or is not shared with your account.">
-        <EmptyState icon="mail" title="Return to your support inbox." description="Your requests and the cases your team answers are listed there." href="/support" label="All support cases" />
+      <SupportShell title={t("Case unavailable.")} description={t("This case does not exist or is not shared with your account.")}>
+        <EmptyState icon="mail" title={t("Return to your support inbox.")} description={t("Your requests and the cases your team answers are listed there.")} href="/support" label={t("All support cases")} />
       </SupportShell>
     );
   if (!sc) return <LoadingPage />;
@@ -395,20 +386,18 @@ function CaseThread({ id }: { id: string }) {
       description={`${caseRef(sc.id)} · ${CATEGORY_LABELS[sc.category] ?? sc.category}`}
       action={
         <Link className="text-link" href="/support">
-          <Icon name="back" size={16} />
-          All support cases
-        </Link>
+          <Icon name="back" size={16} />{t("All support cases")}</Link>
       }
     >
       <div className="support-thread-heading">
         <CaseBadge status={sc.status} label={sc.status_label} />
-        {sc.is_escalated && <span className="support-escalated">Escalated to platform support</span>}
-        <span>Opened {stamp(sc.created_at)}</span>
+        {sc.is_escalated && <span className="support-escalated">{t("Escalated to platform support")}</span>}
+        <span>{t("Opened {stamp}", { stamp: stamp(sc.created_at) })}</span>
       </div>
       {notice && <Notice error={notice.error}>{notice.text}</Notice>}
       <div className="support-thread-layout">
         <div>
-          <section className="support-messages" role="log" aria-label="Case messages" aria-live="polite" aria-relevant="additions">
+          <section className="support-messages" role="log" aria-label={t("Case messages")} aria-live="polite" aria-relevant="additions">
             {messages.map((m) => {
               const own = m.sender_user_id === user?.id;
               return (
@@ -416,7 +405,7 @@ function CaseThread({ id }: { id: string }) {
                   <header>
                     <strong>
                       {m.sender_name}
-                      {own ? " (you)" : m.from_staff ? " · support" : ""}
+                      {own ? t(" (you)") : m.from_staff ? t(" · support") : ""}
                     </strong>
                     <time dateTime={m.created_at}>{stamp(m.created_at)}</time>
                   </header>
@@ -432,31 +421,28 @@ function CaseThread({ id }: { id: string }) {
               const form = e.currentTarget;
               const body = String(new FormData(form).get("body")).trim();
               if (!body) return;
-              void run("reply", () => api.request<CaseDetail>(`/support/cases/${id}/messages`, { body: { body } }), "Reply sent. The other side gets an email and a notification.", form);
+              void run("reply", () => api.request<CaseDetail>(`/support/cases/${id}/messages`, { body: { body } }), t("Reply sent. The other side gets an email and a notification."), form);
             }}
           >
-            <label>
-              Add a reply
-              <textarea name="body" rows={4} required maxLength={5000} placeholder="Write your reply…" />
+            <label>{t("Add a reply")}<textarea name="body" rows={4} required maxLength={5000} placeholder={t("Write your reply…")} />
             </label>
             <p className="field-hint">
-              {sc.status === "resolved" ? "Replying reopens this case." : "You can leave this page; replies arrive by email too."}
+              {sc.status === "resolved" ? t("Replying reopens this case.") : t("You can leave this page; replies arrive by email too.")}
             </p>
             <button className="btn btn-primary" disabled={busy === "reply"}>
-              {busy === "reply" ? "Sending…" : "Send reply"}
+              {busy === "reply" ? t("Sending…") : t("Send reply")}
               <Icon name="arrow" size={16} />
             </button>
           </form>
           <details className="support-history">
-            <summary>
-              Case history <span>{sc.history.length} entries</span>
+            <summary>{t("Case history")}{" "}<span>{t("{length} entries", { length: sc.history.length })}</span>
             </summary>
             <ol>
               {sc.history.map((h) => (
                 <li key={h.id}>
                   <span>{h.action}</span>
                   <small>
-                    {h.actor_name ?? "System"} · <time dateTime={h.created_at}>{stamp(h.created_at)}</time>
+                    {h.actor_name ?? t("System")} · <time dateTime={h.created_at}>{stamp(h.created_at)}</time>
                   </small>
                 </li>
               ))}
@@ -464,40 +450,40 @@ function CaseThread({ id }: { id: string }) {
           </details>
         </div>
         <aside className="support-case-aside">
-          <section className="support-context" aria-label="Case details">
-            <h2>About this case</h2>
+          <section className="support-context" aria-label={t("Case details")}>
+            <h2>{t("About this case")}</h2>
             <dl>
               <div>
-                <dt>Requester</dt>
+                <dt>{t("Requester")}</dt>
                 <dd>{sc.requester_name}</dd>
               </div>
               <div>
-                <dt>Support team</dt>
-                <dd>{sc.audience === "organizer" || sc.is_escalated ? "BiletFlow platform support" : "Event organizer team"}</dd>
+                <dt>{t("Support team")}</dt>
+                <dd>{sc.audience === "organizer" || sc.is_escalated ? t("BiletFlow platform support") : t("Event organizer team")}</dd>
               </div>
               {sc.event_id && (
                 <div>
-                  <dt>Event</dt>
-                  <dd>{sc.event_title ?? "Event"}</dd>
+                  <dt>{t("Event")}</dt>
+                  <dd>{sc.event_title ?? t("Event")}</dd>
                 </div>
               )}
               {sc.order_id && (
                 <div>
-                  <dt>Order</dt>
+                  <dt>{t("Order")}</dt>
                   <dd>{sc.order_id.slice(0, 8).toUpperCase()}</dd>
                 </div>
               )}
               {sc.ticket_id && (
                 <div>
-                  <dt>Ticket</dt>
+                  <dt>{t("Ticket")}</dt>
                   <dd>{sc.ticket_id.slice(0, 8).toUpperCase()}</dd>
                 </div>
               )}
             </dl>
           </section>
           <section className="support-assignment">
-            <h2>Case handling</h2>
-            <p>{sc.assignee_name ? `Assigned to ${sc.assignee_name}` : "Waiting for a team member to pick it up."}</p>
+            <h2>{t("Case handling")}</h2>
+            <p>{sc.assignee_name ? t("Assigned to {assignee_name}", { assignee_name: sc.assignee_name }) : t("Waiting for a team member to pick it up.")}</p>
             {sc.can_manage && (
               <form
                 key={`${sc.status}-${sc.assignee_user_id ?? ""}`}
@@ -512,28 +498,24 @@ function CaseThread({ id }: { id: string }) {
                         method: "PATCH",
                         body: { status: d.get("status"), assignee_user_id: String(d.get("assignee")) || null },
                       }),
-                    "Case updated. The change is in its history.",
+                    t("Case updated. The change is in its history."),
                   );
                 }}
               >
-                <label>
-                  Status
-                  <select name="status" defaultValue={sc.status}>
+                <label>{t("Status")}<select name="status" defaultValue={sc.status}>
                     {STATUS_OPTIONS.map((s) => (
                       <option key={s.value} value={s.value}>{s.label}</option>
                     ))}
                   </select>
                 </label>
-                <label>
-                  Assigned to
-                  <select name="assignee" defaultValue={sc.assignee_user_id ?? ""}>
-                    <option value="">Unassigned</option>
+                <label>{t("Assigned to")}<select name="assignee" defaultValue={sc.assignee_user_id ?? ""}>
+                    <option value="">{t("Unassigned")}</option>
                     {assignees.data?.map((a) => (
                       <option key={a.user_id} value={a.user_id}>{a.full_name}</option>
                     ))}
                   </select>
                 </label>
-                <button className="btn btn-secondary" disabled={busy === "manage"}>Save case changes</button>
+                <button className="btn btn-secondary" disabled={busy === "manage"}>{t("Save case changes")}</button>
               </form>
             )}
             {sc.can_manage && !sc.is_escalated && sc.audience === "attendee" && !isAdmin && (
@@ -543,14 +525,12 @@ function CaseThread({ id }: { id: string }) {
                   e.preventDefault();
                   const form = e.currentTarget;
                   const reason = String(new FormData(form).get("reason")).trim();
-                  void run("escalate", () => api.request<CaseDetail>(`/support/cases/${id}/escalate`, { body: { reason } }), "Passed to the BiletFlow platform team.", form);
+                  void run("escalate", () => api.request<CaseDetail>(`/support/cases/${id}/escalate`, { body: { reason } }), t("Passed to the BiletFlow platform team."), form);
                 }}
               >
-                <label>
-                  Need the platform team?
-                  <input name="reason" required minLength={3} maxLength={500} placeholder="Why it needs them" />
+                <label>{t("Need the platform team?")}<input name="reason" required minLength={3} maxLength={500} placeholder={t("Why it needs them")} />
                 </label>
-                <button className="btn btn-secondary" disabled={busy === "escalate"}>Escalate to platform support</button>
+                <button className="btn btn-secondary" disabled={busy === "escalate"}>{t("Escalate to platform support")}</button>
               </form>
             )}
           </section>
@@ -561,6 +541,7 @@ function CaseThread({ id }: { id: string }) {
 }
 
 export function SupportPage({ id, query = {} }: { id?: string; query?: Record<string, string> }) {
+  const t = useT();
   const { user, ready } = useSession();
   if (!ready) return <LoadingPage />;
   if (!user)
@@ -568,10 +549,10 @@ export function SupportPage({ id, query = {} }: { id?: string; query?: Record<st
       <div className="workspace">
         <EmptyState
           icon="mail"
-          title="Keep the conversation together."
-          description="Sign in to open a support request or follow the ones you have."
+          title={t("Keep the conversation together.")}
+          description={t("Sign in to open a support request or follow the ones you have.")}
           href={`/sign-in?next=${encodeURIComponent(id ? `/support/${id}` : "/support")}`}
-          label="Sign in"
+          label={t("Sign in")}
         />
       </div>
     );

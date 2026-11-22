@@ -3,18 +3,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent, type ReactNode } from "react";
-import { api, type Language } from "@/lib/api";
+import { api } from "@/lib/api";
 import { refreshSession, signOut, useSession } from "./session-provider";
 import { EmptyState, Icon, LoadingPage, Notice, PageIntro } from "./primitives";
 
-const LANGUAGES: { value: Language; label: string }[] = [
-  { value: "kk", label: "Қазақша" },
-  { value: "ru", label: "Русский" },
-  { value: "en", label: "English" },
-];
-
+import { LanguageSwitch, useT } from "@/components/language";
+import { formatDate, tr } from "@/lib/i18n";
 const failure = (error: unknown, fallback: string) =>
-  error instanceof Error && error.message ? error.message : fallback;
+  tr(error instanceof Error && error.message ? error.message : fallback);
 
 function ProfileDetails({ rows }: { rows: [string, ReactNode][] }) {
   return (
@@ -30,6 +26,7 @@ function ProfileDetails({ rows }: { rows: [string, ReactNode][] }) {
 }
 
 export function ProfilePage() {
+  const t = useT();
   const { user, organizer, ready, isAdmin } = useSession();
   const router = useRouter();
   const [notice, setNotice] = useState("");
@@ -41,10 +38,10 @@ export function ProfilePage() {
     return (
       <div className="workspace">
         <EmptyState
-          title="Your account lives here."
-          description="Sign in to see and change your details, language and password."
+          title={t("Your account lives here.")}
+          description={t("Sign in to see and change your details, language and password.")}
           href="/sign-in?next=/profile"
-          label="Sign in"
+          label={t("Sign in")}
         />
       </div>
     );
@@ -57,7 +54,7 @@ export function ProfilePage() {
       const text = await action();
       if (text) setNotice(text);
     } catch (error) {
-      setError(failure(error, "That did not work. Please try again."));
+      setError(failure(error, t("That did not work. Please try again.")));
     } finally {
       setBusy("");
     }
@@ -69,10 +66,9 @@ export function ProfilePage() {
     void run("details", async () => {
       await api.users.updateMe({
         full_name: String(data.get("full_name")).trim(),
-        preferred_language: String(data.get("language")) as Language,
       });
       await refreshSession();
-      return "Your details were saved.";
+      return t("Your details were saved.");
     });
   }
 
@@ -81,85 +77,73 @@ export function ProfilePage() {
     const form = event.currentTarget;
     const data = new FormData(form);
     const next = String(data.get("new_password"));
-    if (next !== data.get("confirm_password")) return setError("Your new passwords do not match.");
+    if (next !== data.get("confirm_password")) return setError(t("Your new passwords do not match."));
     void run("password", async () => {
       await api.auth.changePassword(String(data.get("current_password")), next);
       form.reset();
-      return "Your password was changed. Other devices have been signed out.";
+      return t("Your password was changed. Other devices have been signed out.");
     });
   }
 
   return (
     <main className="workspace profile-workspace">
-      <PageIntro eyebrow="Your account" title="Account profile." description="Your details, language and sign-in settings." />
+      <PageIntro eyebrow={t("Your account")} title={t("Account profile.")} description={t("Your details, language and sign-in settings.")} />
       {notice && <Notice>{notice}</Notice>}
       {error && <Notice error>{error}</Notice>}
       {!user.is_email_verified && (
-        <Notice>
-          Please confirm your email address. Paid tickets and organizer tools need a confirmed email.{" "}
+        <Notice>{t("Please confirm your email address. Paid tickets and organizer tools need a confirmed email.")}{" "}
           <button
             className="text-link"
             disabled={busy === "verify"}
             onClick={() =>
               run("verify", async () => {
                 const result = await api.auth.requestVerification();
-                return result?.detail ?? "A new confirmation link is on its way.";
+                return result?.detail ?? t("A new confirmation link is on its way.");
               })
             }
           >
-            {busy === "verify" ? "Sending…" : "Send the link again"}
+            {busy === "verify" ? t("Sending…") : t("Send the link again")}
           </button>
         </Notice>
       )}
       <ProfileDetails
         rows={[
-          ["Email address", <>{user.email} {user.is_email_verified ? <small>· confirmed</small> : <small>· not confirmed</small>}</>],
-          ["Account type", isAdmin ? "Platform administrator" : organizer ? `Organizer · ${organizer.display_name}` : "Attendee"],
-          ["Member since", new Intl.DateTimeFormat("en-GB", { dateStyle: "long", timeZone: "Asia/Almaty" }).format(new Date(user.created_at))],
+          [t("Email address"), <>{user.email} {user.is_email_verified ? <small>{t("· confirmed")}</small> : <small>{t("· not confirmed")}</small>}</>],
+          [t("Account type"), isAdmin ? t("Platform administrator") : organizer ? t("Organizer · {display_name}", { display_name: organizer.display_name }) : t("Attendee")],
+          [t("Member since"), formatDate(t.lang, new Date(user.created_at), { dateStyle: "long", timeZone: "Asia/Almaty" })],
         ]}
       />
 
       <form className="stack-form" onSubmit={saveDetails} aria-busy={busy === "details"}>
-        <h2>Details</h2>
-        <label>
-          Full name
-          <input name="full_name" defaultValue={user.full_name} required minLength={2} maxLength={100} autoComplete="name" disabled={busy === "details"} />
+        <h2>{t("Details")}</h2>
+        <label>{t("Full name")}<input name="full_name" defaultValue={user.full_name} required minLength={2} maxLength={100} autoComplete="name" disabled={busy === "details"} />
         </label>
-        <label>
-          Language for emails and notifications
-          <select name="language" defaultValue={user.preferred_language} disabled={busy === "details"}>
-            {LANGUAGES.map((language) => (
-              <option key={language.value} value={language.value}>{language.label}</option>
-            ))}
-          </select>
-        </label>
+        <div className="field-group">
+          <span>{t("Language")}</span>
+          <LanguageSwitch />
+          <span className="field-hint">{t("Used on the site, in the app, emails and notifications. It changes straight away.")}</span>
+        </div>
         <button className="btn btn-primary" disabled={busy === "details"}>
-          {busy === "details" ? "Saving…" : "Save details"}
+          {busy === "details" ? t("Saving…") : t("Save details")}
         </button>
       </form>
 
       <form className="stack-form" onSubmit={changePassword} aria-busy={busy === "password"}>
-        <h2>Password</h2>
-        <label>
-          Current password
-          <input name="current_password" type="password" autoComplete="current-password" required maxLength={128} disabled={busy === "password"} />
+        <h2>{t("Password")}</h2>
+        <label>{t("Current password")}<input name="current_password" type="password" autoComplete="current-password" required maxLength={128} disabled={busy === "password"} />
         </label>
-        <label>
-          New password
-          <input name="new_password" type="password" autoComplete="new-password" required minLength={8} maxLength={128} disabled={busy === "password"} />
+        <label>{t("New password")}<input name="new_password" type="password" autoComplete="new-password" required minLength={8} maxLength={128} disabled={busy === "password"} />
         </label>
-        <label>
-          Confirm new password
-          <input name="confirm_password" type="password" autoComplete="new-password" required minLength={8} maxLength={128} disabled={busy === "password"} />
+        <label>{t("Confirm new password")}<input name="confirm_password" type="password" autoComplete="new-password" required minLength={8} maxLength={128} disabled={busy === "password"} />
         </label>
         <button className="btn btn-primary" disabled={busy === "password"}>
-          {busy === "password" ? "Changing…" : "Change password"}
+          {busy === "password" ? t("Changing…") : t("Change password")}
         </button>
       </form>
 
       <div className="button-row">
         {!organizer && !isAdmin && (
-          <Link className="btn btn-secondary" href="/organizer">Become an organizer <Icon name="arrow" size={16} /></Link>
+          <Link className="btn btn-secondary" href="/organizer">{t("Become an organizer")}{" "}<Icon name="arrow" size={16} /></Link>
         )}
         <button
           className="btn btn-secondary"
@@ -171,9 +155,7 @@ export function ProfilePage() {
               router.push("/sign-in");
             })
           }
-        >
-          Sign out on all devices
-        </button>
+        >{t("Sign out on all devices")}</button>
       </div>
     </main>
   );

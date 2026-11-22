@@ -9,8 +9,10 @@ import { caseTone, ref, stamp } from "@/components/format";
 import { failure, useLoad } from "@/components/use-load";
 import { Badge, Button, Card, Empty, Facts, Field, H2, Intro, Loading, Notice, Row, Screen, Select, T } from "@/components/ui";
 import { color } from "@/components/theme";
+import { useT } from "@/lib/i18n";
 
 export default function CaseThread() {
+  const t = useT();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user, isAdmin } = useSession();
   const [version, setVersion] = useState(0);
@@ -60,7 +62,7 @@ export default function CaseThread() {
   if (data.status === "error" && !sc)
     return (
       <Screen>
-        <Empty icon="mail-outline" title="Case unavailable." description="This case does not exist or is not shared with your account." />
+        <Empty icon="mail-outline" title={t("Case unavailable.")} description={t("This case does not exist or is not shared with your account.")} />
       </Screen>
     );
   if (!sc)
@@ -76,10 +78,10 @@ export default function CaseThread() {
       <Stack.Screen options={{ title: caseRef(sc.id) }} />
       <Intro title={sc.subject} description={`${caseRef(sc.id)} · ${CATEGORY_LABELS[sc.category] ?? sc.category}`} />
       <Row>
-        <Badge tone={caseTone(sc.status)} label={sc.status_label} />
-        {sc.is_escalated && <Badge tone="warn" label="Escalated to platform support" />}
+        <Badge tone={caseTone(sc.status)} label={t(sc.status_label)} />
+        {sc.is_escalated && <Badge tone="warn" label={t("Escalated to platform support")} />}
         <T small muted>
-          Opened {stamp(sc.created_at)}
+          {t("Opened {stamp}", { stamp: stamp(sc.created_at) })}
         </T>
       </Row>
       {notice && <Notice error={notice.error} onDismiss={() => setNotice(null)}>{notice.text}</Notice>}
@@ -101,7 +103,7 @@ export default function CaseThread() {
           >
             <T small bold>
               {m.sender_name}
-              {own ? " (you)" : m.from_staff ? " · support" : ""}
+              {own ? t(" (you)") : m.from_staff ? t(" · support") : ""}
             </T>
             <T>{m.body}</T>
             <T small muted>
@@ -111,46 +113,46 @@ export default function CaseThread() {
         );
       })}
       <Card>
-        <Field label="Add a reply" value={reply} onChangeText={setReply} multiline maxLength={5000} placeholder="Write your reply…" hint={sc.status === "resolved" ? "Replying reopens this case." : "Replies arrive by email and notification too."} />
+        <Field label={t("Add a reply")} value={reply} onChangeText={setReply} multiline maxLength={5000} placeholder={t("Write your reply…")} hint={sc.status === "resolved" ? t("Replying reopens this case.") : t("Replies arrive by email and notification too.")} />
         <Button
-          label="Send reply"
+          label={t("Send reply")}
           icon="send"
           busy={busy === "reply"}
           disabled={!reply.trim()}
           onPress={() =>
-            run("reply", () => api.request(`/support/cases/${id}/messages`, { body: { body: reply.trim() } }), "Reply sent. The other side gets an email and a notification.", () => setReply(""))
+            run("reply", () => api.request(`/support/cases/${id}/messages`, { body: { body: reply.trim() } }), t("Reply sent. The other side gets an email and a notification."), () => setReply(""))
           }
         />
       </Card>
       <Facts
         rows={[
-          ["Requester", sc.requester_name],
-          ["Support team", sc.audience === "organizer" || sc.is_escalated ? "BiletFlow platform support" : "Event organizer team"],
-          ...(sc.event_id ? ([["Event", sc.event_title ?? "Event"]] as [string, string][]) : []),
-          ...(sc.order_id ? ([["Order", ref(sc.order_id)]] as [string, string][]) : []),
-          ...(sc.ticket_id ? ([["Ticket", ref(sc.ticket_id)]] as [string, string][]) : []),
-          ["Handling", sc.assignee_name ? `Assigned to ${sc.assignee_name}` : "Waiting for a team member to pick it up."],
+          [t("Requester"), sc.requester_name],
+          [t("Support team"), sc.audience === "organizer" || sc.is_escalated ? t("BiletFlow platform support") : t("Event organizer team")],
+          ...(sc.event_id ? ([[t("Event"), sc.event_title ?? t("Event")]] as [string, string][]) : []),
+          ...(sc.order_id ? ([[t("Order"), ref(sc.order_id)]] as [string, string][]) : []),
+          ...(sc.ticket_id ? ([[t("Ticket"), ref(sc.ticket_id)]] as [string, string][]) : []),
+          [t("Handling"), sc.assignee_name ? t("Assigned to {assignee_name}", { assignee_name: sc.assignee_name }) : t("Waiting for a team member to pick it up.")],
         ]}
       />
       {sc.can_manage && (
         <Card>
-          <H2>Case handling</H2>
-          <Select label="Status" value={currentStatus} onChange={(v) => setStatus(v)} options={STATUS_OPTIONS} />
+          <H2>{t("Case handling")}</H2>
+          <Select label={t("Status")} value={currentStatus} onChange={(v) => setStatus(v)} options={STATUS_OPTIONS} />
           <Select
-            label="Assigned to"
+            label={t("Assigned to")}
             value={currentAssignee}
             onChange={setAssignee}
-            options={[{ value: "", label: "Unassigned" }, ...(assignees.data ?? []).map((a) => ({ value: a.user_id, label: a.full_name }))]}
+            options={[{ value: "", label: t("Unassigned") }, ...(assignees.data ?? []).map((a) => ({ value: a.user_id, label: a.full_name }))]}
           />
           <Button
             kind="secondary"
-            label="Save case changes"
+            label={t("Save case changes")}
             busy={busy === "manage"}
             onPress={() =>
               run(
                 "manage",
                 () => api.request(`/support/cases/${id}`, { method: "PATCH", body: { status: currentStatus, assignee_user_id: currentAssignee || null } }),
-                "Case updated. The change is in its history.",
+                t("Case updated. The change is in its history."),
                 () => {
                   setStatus("");
                   setAssignee(null);
@@ -162,23 +164,23 @@ export default function CaseThread() {
       )}
       {sc.can_manage && !sc.is_escalated && sc.audience === "attendee" && !isAdmin && (
         <Card>
-          <Field label="Need the platform team?" value={reason} onChangeText={setReason} maxLength={500} placeholder="Why it needs them" />
+          <Field label={t("Need the platform team?")} value={reason} onChangeText={setReason} maxLength={500} placeholder={t("Why it needs them")} />
           <Button
             kind="secondary"
-            label="Escalate to platform support"
+            label={t("Escalate to platform support")}
             busy={busy === "escalate"}
             disabled={reason.trim().length < 3}
-            onPress={() => run("escalate", () => api.request(`/support/cases/${id}/escalate`, { body: { reason: reason.trim() } }), "Passed to the BiletFlow platform team.", () => setReason(""))}
+            onPress={() => run("escalate", () => api.request(`/support/cases/${id}/escalate`, { body: { reason: reason.trim() } }), t("Passed to the BiletFlow platform team."), () => setReason(""))}
           />
         </Card>
       )}
-      <Button kind="text" label={`${showHistory ? "Hide" : "Show"} case history (${sc.history.length})`} onPress={() => setShowHistory((v) => !v)} />
+      <Button kind="text" label={showHistory ? t("Hide case history ({length})", { length: sc.history.length }) : t("Show case history ({length})", { length: sc.history.length })} onPress={() => setShowHistory((v) => !v)} />
       {showHistory &&
         sc.history.map((h) => (
           <View key={h.id} style={{ borderLeftWidth: 2, borderLeftColor: color.line, paddingLeft: 10 }}>
             <T>{h.action}</T>
             <T small muted>
-              {h.actor_name ?? "System"} · {stamp(h.created_at)}
+              {h.actor_name ?? t("System")} · {stamp(h.created_at)}
             </T>
           </View>
         ))}

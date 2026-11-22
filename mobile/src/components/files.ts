@@ -9,6 +9,7 @@ import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import * as WebBrowser from "expo-web-browser";
 import { client } from "@/lib/api";
+import { tr } from "@/lib/i18n";
 
 const MIME: Record<string, string> = {
   pdf: "application/pdf",
@@ -23,7 +24,7 @@ export async function shareFile(path: string, filename: string) {
   const url = client.url(path);
   if (Platform.OS === "web") {
     const response = await fetch(url, { headers });
-    if (!response.ok) throw new Error("Could not download the file.");
+    if (!response.ok) throw new Error(tr("Could not download the file."));
     const blob = await response.blob();
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
@@ -36,7 +37,7 @@ export async function shareFile(path: string, filename: string) {
   const extension = filename.split(".").pop() ?? "";
   if (await Sharing.isAvailableAsync())
     await Sharing.shareAsync(file.uri, { mimeType: MIME[extension], dialogTitle: filename });
-  else throw new Error("Sharing files is not available on this device.");
+  else throw new Error(tr("Sharing files is not available on this device."));
 }
 
 /** Open a web page (Google Calendar, maps…) in the in-app browser. */

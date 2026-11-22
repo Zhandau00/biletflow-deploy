@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { tk, tr } from "@/lib/i18n";
 
 export type Loaded<T> =
   | { status: "loading"; data?: T }
@@ -22,7 +23,7 @@ export function useLoad<T>(key: string, load: (signal: AbortSignal) => Promise<T
       (data) => !controller.signal.aborted && setState({ status: "ready", data, key }),
       (error: unknown) => {
         if (controller.signal.aborted) return;
-        const failure = error instanceof Error ? error : new Error("Something went wrong.");
+        const failure = error instanceof Error ? error : new Error(tr("Something went wrong."));
         const httpStatus =
           typeof (error as { status?: unknown })?.status === "number" ? (error as { status: number }).status : 0;
         setState((previous) => ({ status: "error", error: failure, httpStatus, data: previous.data, key }));
@@ -37,5 +38,6 @@ export function useLoad<T>(key: string, load: (signal: AbortSignal) => Promise<T
   return { ...state, reload, refreshing: state.status === "loading" && state.data !== undefined };
 }
 
-export const failure = (error: unknown, fallback = "That did not work. Please try again.") =>
-  error instanceof Error && error.message ? error.message : fallback;
+/** The message to show for a failed request, in the app's language when it is a known one. */
+export const failure = (error: unknown, fallback = tk("That did not work. Please try again.")) =>
+  tr(error instanceof Error && error.message ? error.message : fallback);

@@ -2,6 +2,8 @@
 
 import { useSyncExternalStore } from "react";
 import { api, ApiError, type ApiUser, type OrganizerProfile } from "@/lib/api";
+import { getLang } from "@/lib/i18n";
+import { applyLanguage } from "./language";
 
 /**
  * The signed-in BiletFlow account, shared by every component.
@@ -40,6 +42,8 @@ async function optional<T>(load: () => Promise<T>, fallback: T): Promise<T> {
 async function load() {
   try {
     const user = await api.users.me();
+    // The profile decides the language on every device
+    if (user.preferred_language !== getLang()) applyLanguage(user.preferred_language);
     const [organizer, staffEvents] = await Promise.all([
       optional(() => api.organizers.me(), null),
       optional(() => api.request<StaffEvent[]>("/events/mine"), []),

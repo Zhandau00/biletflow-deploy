@@ -1,5 +1,7 @@
 /** Orders, tickets, quotes and seat maps as the BiletFlow backend returns them. */
 
+import { tk, translatedRecord } from "./i18n";
+
 export type OrderStatus = "pending" | "confirmed" | "cancelled" | "refunded" | "expired";
 export type TicketStatus = "valid" | "checked_in" | "cancelled" | "refunded";
 
@@ -148,20 +150,20 @@ export function parseSelection(raw?: string, seats?: string): Selection {
 export const ticketCount = (selection: Selection) =>
   selection.seat_ids.length || selection.items.reduce((s, i) => s + i.quantity, 0);
 
-export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
-  pending: "Awaiting payment",
-  confirmed: "Confirmed",
-  cancelled: "Cancelled",
-  refunded: "Refunded",
-  expired: "Expired",
-};
+export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = translatedRecord({
+  pending: tk("Awaiting payment"),
+  confirmed: tk("Confirmed"),
+  cancelled: tk("Cancelled"),
+  refunded: tk("Refunded"),
+  expired: tk("Expired"),
+});
 
-export const TICKET_STATUS_LABEL: Record<TicketStatus, string> = {
-  valid: "Ready for your night",
-  checked_in: "Checked in",
-  cancelled: "Cancelled",
-  refunded: "Refunded",
-};
+export const TICKET_STATUS_LABEL: Record<TicketStatus, string> = translatedRecord({
+  valid: tk("Ready for your night"),
+  checked_in: tk("Checked in"),
+  cancelled: tk("Cancelled"),
+  refunded: tk("Refunded"),
+});
 
 /** "Upcoming", "past" or "closed" for the My tickets tabs. */
 export function orderTab(order: Order, now = Date.now()): "upcoming" | "past" | "closed" {

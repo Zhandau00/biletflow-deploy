@@ -8,8 +8,10 @@ import { useSession } from "@/components/session";
 import { useLoad } from "@/components/use-load";
 import { caseTone, stamp } from "@/components/format";
 import { Badge, Button, Card, Chips, Empty, Field, H2, Intro, LoadError, Loading, Row, Screen, Select, T } from "@/components/ui";
+import { useT } from "@/lib/i18n";
 
 export default function SupportInbox() {
+  const t = useT();
   const { user, ready, organizer, isAdmin } = useSession();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
@@ -26,7 +28,7 @@ export default function SupportInbox() {
   if (!user)
     return (
       <Screen>
-        <Empty icon="chatbubbles-outline" title="Keep the conversation together." description="Sign in to open a support request or follow the ones you have." action="Sign in" onAction={() => signInFirst("/support")} />
+        <Empty icon="chatbubbles-outline" title={t("Keep the conversation together.")} description={t("Sign in to open a support request or follow the ones you have.")} action={t("Sign in")} onAction={() => signInFirst("/support")} />
       </Screen>
     );
   const query = search.trim().toLowerCase();
@@ -36,35 +38,35 @@ export default function SupportInbox() {
   return (
     <Screen onRefresh={cases.reload} refreshing={cases.refreshing}>
       <Intro
-        eyebrow="BiletFlow support"
-        title="A little help, a better night."
+        eyebrow={t("BiletFlow support")}
+        title={t("A little help, a better night.")}
         description={
           isAdmin
-            ? "Organizer requests to the platform and escalated attendee cases. Attendee questions go to each event's team first."
-            : "Your requests and the cases your team answers. You get a notification when someone replies."
+            ? t("Organizer requests to the platform and escalated attendee cases. Attendee questions go to each event's team first.")
+            : t("Your requests and the cases your team answers. You get a notification when someone replies.")
         }
       />
       {!isAdmin && (
-        <Button label="New support request" icon="add" onPress={() => openSupport(organizer ? { to: "platform" } : {})} />
+        <Button label={t("New support request")} icon="add" onPress={() => openSupport(organizer ? { to: "platform" } : {})} />
       )}
-      <Field label="Search cases" value={search} onChangeText={setSearch} placeholder="Subject, reference, event or requester" />
+      <Field label={t("Search cases")} value={search} onChangeText={setSearch} placeholder={t("Subject, reference, event or requester")} />
       <Chips
         value={scope}
         onChange={setScope}
         options={[
-          { value: "all", label: "Everything I can see" },
-          { value: "requested", label: "Requests I opened" },
-          { value: "handling", label: "Cases I answer" },
+          { value: "all", label: t("Everything I can see") },
+          { value: "requested", label: t("Requests I opened") },
+          { value: "handling", label: t("Cases I answer") },
         ]}
       />
-      <Select label="Status" value={status} onChange={setStatus} options={[{ value: "", label: "All statuses" }, ...STATUS_OPTIONS]} />
+      <Select label={t("Status")} value={status} onChange={setStatus} options={[{ value: "", label: t("All statuses") }, ...STATUS_OPTIONS]} />
       {cases.status === "error" && <LoadError message={cases.error.message} retry={cases.reload} />}
       {!cases.data ? (
         cases.status !== "error" && <Loading />
       ) : list.length ? (
         <>
           <T muted small>
-            {list.length} {list.length === 1 ? "case" : "cases"}
+            {t.plural(list.length, "{n} case", "{n} cases")}
           </T>
           {list.map((c) => (
             <Card key={c.id} onPress={() => router.push(`/support/${c.id}`)}>
@@ -72,21 +74,21 @@ export default function SupportInbox() {
                 <T small muted>
                   {caseRef(c.id)} · {CATEGORY_LABELS[c.category] ?? c.category}
                 </T>
-                <Badge tone={caseTone(c.status)} label={c.status_label} />
+                <Badge tone={caseTone(c.status)} label={t(c.status_label)} />
               </Row>
               <H2>{c.subject}</H2>
               <T small muted>
-                {c.requester_user_id === user.id ? "You" : c.requester_name} · {c.audience === "organizer" ? "Platform support" : (c.event_title ?? "Event support")}
-                {c.assignee_name ? ` · Assigned to ${c.assignee_name}` : " · Unassigned"}
+                {c.requester_user_id === user.id ? t("You") : c.requester_name} · {c.audience === "organizer" ? t("Platform support") : (c.event_title ?? t("Event support"))}
+                {c.assignee_name ? t(" · Assigned to {assignee_name}", { assignee_name: c.assignee_name }) : t(" · Unassigned")}
               </T>
               <Row style={{ justifyContent: "space-between" }}>
                 <T small muted>
                   {stamp(c.updated_at)}
                 </T>
                 <Row>
-                  {c.is_escalated && <Badge tone="warn" label="Escalated" />}
+                  {c.is_escalated && <Badge tone="warn" label={t("Escalated")} />}
                   <T small>
-                    {c.message_count} {c.message_count === 1 ? "message" : "messages"}
+                    {t.plural(c.message_count, "{n} message", "{n} messages")}
                   </T>
                 </Row>
               </Row>
@@ -96,8 +98,8 @@ export default function SupportInbox() {
       ) : (
         <Empty
           icon="mail-outline"
-          title={cases.data.length ? "No matching cases." : "Your inbox is clear."}
-          description={cases.data.length ? "Try a different status or search." : "Open a request from an event, order or ticket when you need a hand."}
+          title={cases.data.length ? t("No matching cases.") : t("Your inbox is clear.")}
+          description={cases.data.length ? t("Try a different status or search.") : t("Open a request from an event, order or ticket when you need a hand.")}
         />
       )}
     </Screen>

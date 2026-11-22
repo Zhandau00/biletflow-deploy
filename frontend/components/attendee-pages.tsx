@@ -38,21 +38,22 @@ import { useSession } from "./session-provider";
 import { SupportLink } from "./support-pages";
 import { useLoad } from "./use-load";
 import { EmptyState, Gate, Icon, LoadingPage, Notice, PageIntro, Poster } from "./primitives";
+import { useT } from "@/components/language";
 
-const failure = (error: unknown, fallback = "Something went wrong. Please try again.") =>
-  error instanceof Error && error.message ? error.message : fallback;
+import { tk, tr } from "@/lib/i18n";
+const failure = (error: unknown, fallback = tk("Something went wrong. Please try again.")) =>
+  tr(error instanceof Error && error.message ? error.message : fallback);
 
 const longDate = (iso: string, zone: string) =>
   `${eventDate(iso, zone, { weekday: "long", day: "numeric", month: "long", year: "numeric" })} · ${eventTime(iso, zone)}`;
 
 function LoadFailed({ message, retry }: { message: string; retry: () => void }) {
+  const t = useT();
   return (
     <main className="workspace">
       <Notice error>
         {message}{" "}
-        <button className="text-link" onClick={retry}>
-          Try again
-        </button>
+        <button className="text-link" onClick={retry}>{t("Try again")}</button>
       </Notice>
     </main>
   );
@@ -75,6 +76,7 @@ export function CheckoutPage({
   promo?: string;
   link?: string;
 }) {
+  const t = useT();
   const { user, ready } = useSession();
   const data = useLoad(`checkout-${id}`, async (signal) => {
     const [event, types] = await Promise.all([
@@ -97,10 +99,10 @@ export function CheckoutPage({
     return (
       <div className="workspace">
         <EmptyState
-          title="Let’s put a name on your tickets."
-          description="Sign in or create an account to book. Your tickets will wait for you in My tickets."
+          title={t("Let’s put a name on your tickets.")}
+          description={t("Sign in or create an account to book. Your tickets will wait for you in My tickets.")}
           href={`/sign-in?next=${encodeURIComponent(back)}`}
-          label="Continue to sign in"
+          label={t("Continue to sign in")}
         />
       </div>
     );
@@ -128,6 +130,7 @@ function Checkout({
   promoToken?: string;
   buyer: { name: string; email: string };
 }) {
+  const t = useT();
   const router = useRouter();
   const assigned = event.seating_type === "assigned";
   const [selection, setSelection] = useState<Selection>(initial);
@@ -153,7 +156,7 @@ function Checkout({
           setPromoCode(found.code);
         }
       })
-      .catch(() => setQuoteError("That promo link is no longer valid."));
+      .catch(() => setQuoteError(tr("That promo link is no longer valid.")));
   }, [promoToken, event.id]);
 
   // Prices come from the backend, including any discount
@@ -186,18 +189,18 @@ function Checkout({
     return (
       <div className="workspace">
         <EmptyState
-          title="Start with a ticket."
-          description="Choose your ticket type and quantity before checking out."
+          title={t("Start with a ticket.")}
+          description={t("Choose your ticket type and quantity before checking out.")}
           href={`/events/${event.id}`}
-          label="Choose tickets"
+          label={t("Choose tickets")}
         />
       </div>
     );
 
   const typeName = (ticketTypeId: string) =>
-    tickets.find((t) => t.id === ticketTypeId)?.name ?? "Ticket";
+    tickets.find((t) => t.id === ticketTypeId)?.name ?? t("Ticket");
   const guestLabels = selection.seat_ids.length
-    ? selection.seat_ids.map((_, i) => `Seat ${i + 1}`)
+    ? selection.seat_ids.map((_, i) => t("Seat {n0}", { n0: i + 1 }))
     : selection.items.flatMap((item) =>
         Array.from({ length: item.quantity }, (_, i) => `${typeName(item.ticket_type_id)} · guest ${i + 1}`),
       );
@@ -230,40 +233,31 @@ function Checkout({
   return (
     <main className="workspace narrow-workspace">
       <Link className="text-link muted back-link" href={`/events/${event.id}`}>
-        <Icon name="back" size={15} />
-        Back to the event
-      </Link>
+        <Icon name="back" size={15} />{t("Back to the event")}</Link>
       <PageIntro
-        eyebrow="Your next good night"
-        title="Make it a date."
-        description="Check the details, and you’re on the list."
+        eyebrow={t("Your next good night")}
+        title={t("Make it a date.")}
+        description={t("Check the details, and you’re on the list.")}
       />
       <div className="checkout-layout">
         <form className="checkout-form" onSubmit={submit}>
           <div className="section-heading">
             <span className="step-number">01</span>
-            <h2>Who&apos;s coming?</h2>
+            <h2>{t("Who's coming?")}</h2>
           </div>
           <div className="stack-form">
-            <p className="muted">
-              Booking as <strong>{buyer.name}</strong> ({buyer.email}). Tickets are sent to this email
-              and appear in My tickets.
-            </p>
+            <p className="muted">{t("Booking as {name} ({email}). Tickets are sent to this email and appear in My tickets.", { name: buyer.name, email: buyer.email })}</p>
             <label className="checkbox-label">
               <input
                 type="checkbox"
                 checked={nameGuests}
                 onChange={(e) => setNameGuests(e.target.checked)}
-              />
-              Put each guest&apos;s own name and email on their ticket
-            </label>
+              />{t("Put each guest's own name and email on their ticket")}</label>
             {nameGuests &&
               guestLabels.map((label, i) => (
                 <fieldset className="guest-fields" key={label}>
                   <legend>{label}</legend>
-                  <label>
-                    Name
-                    <input
+                  <label>{t("Name")}<input
                       name={`guest-name-${i}`}
                       required
                       minLength={2}
@@ -271,9 +265,7 @@ function Checkout({
                       defaultValue={i === 0 ? buyer.name : ""}
                     />
                   </label>
-                  <label>
-                    Email
-                    <input
+                  <label>{t("Email")}<input
                       name={`guest-email-${i}`}
                       type="email"
                       required
@@ -286,23 +278,21 @@ function Checkout({
           </div>
           <div className="section-heading checkout-step">
             <span className="step-number">02</span>
-            <h2>Promo code</h2>
+            <h2>{t("Promo code")}</h2>
           </div>
           <div className="promo-row">
             <input
-              aria-label="Promo code"
+              aria-label={t("Promo code")}
               value={promoInput}
               maxLength={40}
-              placeholder="Have a code?"
+              placeholder={t("Have a code?")}
               onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
             />
             <button
               type="button"
               className="btn btn-secondary btn-small"
               onClick={() => setPromoCode(promoInput.trim())}
-            >
-              Apply
-            </button>
+            >{t("Apply")}</button>
             {promoCode && (
               <button
                 type="button"
@@ -311,9 +301,7 @@ function Checkout({
                   setPromoInput("");
                   setPromoCode("");
                 }}
-              >
-                Remove
-              </button>
+              >{t("Remove")}</button>
             )}
           </div>
           {quote?.promo && (
@@ -321,30 +309,30 @@ function Checkout({
           )}
           <div className="section-heading checkout-step">
             <span className="step-number">03</span>
-            <h2>{total ? "Payment" : "Free registration"}</h2>
+            <h2>{total ? t("Payment") : t("Free registration")}</h2>
           </div>
           <div className="payment-preview">
             <Icon name="ticket" size={25} />
             <div>
-              <strong>{total ? "Payment is simulated." : "Your place is free."}</strong>
+              <strong>{total ? t("Payment is simulated.") : t("Your place is free.")}</strong>
               <p>
                 {total
-                  ? `Your places are held for 10 minutes while you pay ${price(total)}. BiletFlow is a study project: no card details are taken and no money moves.`
-                  : "Confirm and your tickets are issued straight away."}
+                  ? t("Your places are held for 10 minutes while you pay {price}. BiletFlow is a study project: no card details are taken and no money moves.", { price: price(total) })
+                  : t("Confirm and your tickets are issued straight away.")}
               </p>
             </div>
           </div>
           {quoteError && <Notice error>{quoteError}</Notice>}
           {error && <Notice error>{error}</Notice>}
           <button className="btn btn-primary btn-full" disabled={busy || !quote}>
-            {busy ? "Reserving your places…" : total ? "Continue to payment" : "Complete registration"}
+            {busy ? t("Reserving your places…") : total ? t("Continue to payment") : t("Complete registration")}
             <Icon name="arrow" size={17} />
           </button>
         </form>
         <aside className="order-summary">
           <Poster event={posterInfo(event)} compact />
           <div className="summary-body">
-            <span className="eyebrow">Your night, at a glance</span>
+            <span className="eyebrow">{t("Your night, at a glance")}</span>
             <h2>{event.title}</h2>
             <p className="muted">{longDate(event.start_at, event.timezone)}</p>
             <p className="muted">{venueLine(event)}</p>
@@ -361,33 +349,29 @@ function Checkout({
                   ))}
                   {quote.discount_kzt > 0 && (
                     <div>
-                      <span>Discount ({quote.promo?.code})</span>
+                      <span>{t("Discount ({code})", { code: quote.promo?.code })}</span>
                       <span>−{price(quote.discount_kzt)}</span>
                     </div>
                   )}
                   <div>
-                    <span>Booking fee</span>
+                    <span>{t("Booking fee")}</span>
                     <span>₸0</span>
                   </div>
                 </>
               ) : (
                 <div>
-                  <span>{quoteError ? "Prices unavailable" : "Working out prices…"}</span>
+                  <span>{quoteError ? t("Prices unavailable") : t("Working out prices…")}</span>
                 </div>
               )}
             </div>
             <div className="booking-total">
-              <span>Total · KZT</span>
+              <span>{t("Total · KZT")}</span>
               <strong>{quote ? price(quote.total_kzt) : "—"}</strong>
             </div>
             {assigned ? (
-              <button className="text-link" onClick={() => setPickingSeats(true)}>
-                Change seats
-              </button>
+              <button className="text-link" onClick={() => setPickingSeats(true)}>{t("Change seats")}</button>
             ) : (
-              <Link className="text-link" href={`/events/${event.id}`}>
-                Change tickets
-              </Link>
+              <Link className="text-link" href={`/events/${event.id}`}>{t("Change tickets")}</Link>
             )}
           </div>
         </aside>
@@ -409,6 +393,7 @@ function SeatPicker({
   chosen: string[];
   onDone: (seatIds: string[]) => void;
 }) {
+  const t = useT();
   const [picked, setPicked] = useState<string[]>(chosen);
   const [refresh, setRefresh] = useState(0);
   const map = useLoad(`seats-${event.id}-${refresh}`, (signal) => api.events.seatMap(event.id, { signal }));
@@ -442,13 +427,11 @@ function SeatPicker({
   return (
     <main className="workspace">
       <Link className="text-link muted back-link" href={`/events/${event.id}`}>
-        <Icon name="back" size={15} />
-        Back to the event
-      </Link>
+        <Icon name="back" size={15} />{t("Back to the event")}</Link>
       <PageIntro
-        eyebrow={map.data?.venue_name ?? "Choose your seats"}
-        title="Pick your seats."
-        description="Tap a seat to choose it, tap again to let it go. Up to 20 seats per order."
+        eyebrow={map.data?.venue_name ?? t("Choose your seats")}
+        title={t("Pick your seats.")}
+        description={t("Tap a seat to choose it, tap again to let it go. Up to 20 seats per order.")}
       />
       {map.status === "error" && !map.data && (
         <Notice error>{map.error.message}</Notice>
@@ -460,14 +443,13 @@ function SeatPicker({
       )}
       <div className="seat-footer">
         <span>
-          {stillFree.length} {stillFree.length === 1 ? "seat" : "seats"} · {price(total)}
+          {t.plural(stillFree.length, "{n} seat", "{n} seats")} · {price(total)}
         </span>
         <button
           className="btn btn-primary"
           disabled={!stillFree.length}
           onClick={() => onDone(stillFree)}
-        >
-          Continue with these seats <Icon name="arrow" size={16} />
+        >{t("Continue with these seats")}{" "}<Icon name="arrow" size={16} />
         </button>
       </div>
     </main>
@@ -485,6 +467,7 @@ function SeatGrid({
   picked: string[];
   onToggle: (seat: Seat) => void;
 }) {
+  const t = useT();
   const categories = [...new Set(map.sections.flatMap((s) => s.rows.flatMap((r) => r.seats.map((x) => x.category))))];
   const prices = new Map<string, number | null>();
   const labels = new Map<string, string>();
@@ -498,7 +481,7 @@ function SeatGrid({
   );
   return (
     <div className="seat-map">
-      <div className="seat-stage">Stage</div>
+      <div className="seat-stage">{t("Stage")}</div>
       <div className="seat-legend">
         {categories.map((c, i) => (
           <span key={c}>
@@ -506,11 +489,9 @@ function SeatGrid({
           </span>
         ))}
         <span>
-          <i className="seat seat-taken" /> Taken
-        </span>
+          <i className="seat seat-taken" />{" "}{t("Taken")}</span>
         <span>
-          <i className="seat seat-picked" /> Your choice
-        </span>
+          <i className="seat seat-picked" />{" "}{t("Your choice")}</span>
       </div>
       {map.sections.map((section) => (
         <section key={section.name} className="seat-section" aria-label={section.name}>
@@ -549,6 +530,7 @@ function SeatGrid({
 type Tab = "upcoming" | "past" | "closed";
 
 export function OrdersPage() {
+  const t = useT();
   const { user, ready } = useSession();
   const [tab, setTab] = useState<Tab>("upcoming");
   const [now] = useState(Date.now);
@@ -576,19 +558,18 @@ export function OrdersPage() {
   return (
     <main className="workspace">
       <PageIntro
-        eyebrow="Your plans, in one place"
-        title="Good nights ahead."
-        description={`The next chapter of your calendar, ${user.full_name.split(" ")[0]}.`}
+        eyebrow={t("Your plans, in one place")}
+        title={t("Good nights ahead.")}
+        description={t("The next chapter of your calendar, {n0}.", { n0: user.full_name.split(" ")[0] })}
         action={
-          <Link className="btn btn-secondary" href="/events">
-            Find your next event <Icon name="arrow" size={16} />
+          <Link className="btn btn-secondary" href="/events">{t("Find your next event")}{" "}<Icon name="arrow" size={16} />
           </Link>
         }
       />
       <div className="line-tabs">
-        {(["upcoming", "past", "closed"] as Tab[]).map((t) => (
-          <button key={t} className={tab === t ? "active" : ""} aria-pressed={tab === t} onClick={() => setTab(t)}>
-            {t === "upcoming" ? "Upcoming" : t === "past" ? "Past events" : "Cancelled & refunded"}
+        {(["upcoming", "past", "closed"] as Tab[]).map((key) => (
+          <button key={key} className={tab === key ? "active" : ""} aria-pressed={tab === key} onClick={() => setTab(key)}>
+            {key === "upcoming" ? t("Upcoming") : key === "past" ? t("Past events") : t("Cancelled & refunded")}
           </button>
         ))}
       </div>
@@ -603,26 +584,26 @@ export function OrdersPage() {
           <EmptyState
             title={
               tab === "upcoming"
-                ? "Your calendar has room for a good night."
+                ? t("Your calendar has room for a good night.")
                 : tab === "past"
-                  ? "The memories are still to come."
-                  : "Nothing cancelled or refunded."
+                  ? t("The memories are still to come.")
+                  : t("Nothing cancelled or refunded.")
             }
             description={
               tab === "upcoming"
-                ? "Pick an event you like. Your tickets will be waiting here."
-                : "Orders in this category will appear here."
+                ? t("Pick an event you like. Your tickets will be waiting here.")
+                : t("Orders in this category will appear here.")
             }
             href="/events"
-            label="Explore events"
+            label={t("Explore events")}
           />
         )
       )}
       {shared.length > 0 && (
         <>
           <div className="section-heading tickets-section-heading">
-            <h2>Tickets in your name</h2>
-            <span className="muted">Booked for you by someone else.</span>
+            <h2>{t("Tickets in your name")}</h2>
+            <span className="muted">{t("Booked for you by someone else.")}</span>
           </div>
           <div className="admission-grid">
             {shared.map((ticket) => (
@@ -636,6 +617,7 @@ export function OrdersPage() {
 }
 
 function OrderCard({ order, now }: { order: Order; now: number }) {
+  const t = useT();
   const count = order.items.reduce((s, i) => s + i.quantity, 0);
   const hold = order.status === "pending" ? holdLeft(order.expires_at, now) : null;
   return (
@@ -643,7 +625,7 @@ function OrderCard({ order, now }: { order: Order; now: number }) {
       <div className="order-card-body">
         <div className="order-card-top">
           <span className={`status-badge ${order.status === "confirmed" ? "status-live" : ""}`}>
-            {order.status === "pending" && !hold ? "Hold ran out" : ORDER_STATUS_LABEL[order.status]}
+            {order.status === "pending" && !hold ? t("Hold ran out") : ORDER_STATUS_LABEL[order.status]}
           </span>
           <span className="order-reference">{order.id.slice(0, 8).toUpperCase()}</span>
         </div>
@@ -653,12 +635,12 @@ function OrderCard({ order, now }: { order: Order; now: number }) {
         <p className="muted">{longDate(order.event_start_at, order.event_timezone)}</p>
         <div className="order-card-bottom">
           <span>
-            {count} {count === 1 ? "ticket" : "tickets"}
+            {t.plural(count, "{n} ticket", "{n} tickets")}
             <span className="dot-separator">/</span>
             {price(order.total_kzt)}
           </span>
           <Link className="text-link" href={`/orders/${order.id}`}>
-            {order.status === "pending" && hold ? "Finish payment" : "View order & tickets"}{" "}
+            {order.status === "pending" && hold ? t("Finish payment") : t("View order & tickets")}{" "}
             <Icon name="arrow" size={16} />
           </Link>
         </div>
@@ -686,16 +668,17 @@ function useQr(value: string | null) {
 }
 
 function TicketCard({ ticket }: { ticket: TicketDetail }) {
+  const t = useT();
   const qr = useQr(ticket.qr_payload);
   const usable = ticket.status === "valid";
   return (
     <article className={`admission-ticket ${usable ? "" : "admission-closed"}`}>
       <div className="admission-body">
-        <span className="eyebrow">BILETFLOW / ADMIT ONE</span>
+        <span className="eyebrow">{t("BILETFLOW / ADMIT ONE")}</span>
         <h3>{ticket.ticket_type_name}</h3>
         <p>
           {ticket.attendee_name}
-          {ticket.seat && ` · ${ticket.seat.section}, row ${ticket.seat.row}, seat ${ticket.seat.number}`}
+          {ticket.seat && t(" · {section}, row {row}, seat {number}", { section: ticket.seat.section, row: ticket.seat.row, number: ticket.seat.number })}
         </p>
         <p className="muted">
           {ticket.event.title} · {eventDate(ticket.event.start_at, ticket.event.timezone, { day: "numeric", month: "short" })},{" "}
@@ -706,7 +689,7 @@ function TicketCard({ ticket }: { ticket: TicketDetail }) {
             <span
               className="qr-box"
               role="img"
-              aria-label={`QR code for ticket ${ticket.id.slice(0, 8)}`}
+              aria-label={t("QR code for ticket {slice}", { slice: ticket.id.slice(0, 8) })}
               dangerouslySetInnerHTML={{ __html: qr }}
             />
           ) : (
@@ -717,7 +700,7 @@ function TicketCard({ ticket }: { ticket: TicketDetail }) {
           <span>
             <strong>{TICKET_STATUS_LABEL[ticket.status]}</strong>
             <small>
-              {usable ? "Show this code at the door." : "This ticket can no longer be used for entry."}
+              {usable ? t("Show this code at the door.") : t("This ticket can no longer be used for entry.")}
             </small>
           </span>
         </div>
@@ -726,13 +709,12 @@ function TicketCard({ ticket }: { ticket: TicketDetail }) {
           eventId={ticket.event.id}
           orderId={ticket.order_id}
           ticketId={ticket.id}
-          label="Get help with this ticket"
+          label={t("Get help with this ticket")}
         />
       </div>
       {usable && (
         <a className="admission-download" href={api.tickets.pdf(ticket.id)} download>
-          <Icon name="download" size={17} />
-          Download ticket <span>PDF</span>
+          <Icon name="download" size={17} />{t("Download ticket")}{" "}<span>{t("PDF")}</span>
         </a>
       )}
     </article>
@@ -740,6 +722,7 @@ function TicketCard({ ticket }: { ticket: TicketDetail }) {
 }
 
 export function OrderPage({ id, confirmed }: { id: string; confirmed?: boolean }) {
+  const t = useT();
   const { user, ready } = useSession();
   const [version, setVersion] = useState(0);
   const data = useLoad(user ? `order-${id}-${version}` : "order-none", async (signal) => {
@@ -757,10 +740,10 @@ export function OrderPage({ id, confirmed }: { id: string; confirmed?: boolean }
     return (
       <div className="workspace">
         <EmptyState
-          title="We couldn’t find that order."
-          description="It may belong to another account. Your own tickets are one click away."
+          title={t("We couldn’t find that order.")}
+          description={t("It may belong to another account. Your own tickets are one click away.")}
           href="/orders"
-          label="My tickets"
+          label={t("My tickets")}
         />
       </div>
     );
@@ -790,6 +773,7 @@ function OrderView({
   isBuyer: boolean;
   onChange: () => void;
 }) {
+  const t = useT();
   const [now, setNow] = useState(Date.now);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
@@ -825,23 +809,21 @@ function OrderView({
   return (
     <main className="workspace narrow-workspace">
       <Link className="text-link muted back-link" href="/orders">
-        <Icon name="back" size={15} />
-        All orders
-      </Link>
+        <Icon name="back" size={15} />{t("All orders")}</Link>
       {confirmed && order.status === "confirmed" && (
         <div className="confirmation-banner">
           <span className="confirmation-check">
             <Icon name="check" size={24} />
           </span>
           <div>
-            <span className="eyebrow">You&apos;re on the list</span>
-            <h2>That&apos;s a night to look forward to.</h2>
-            <p>Your tickets are below and on their way to your inbox.</p>
+            <span className="eyebrow">{t("You're on the list")}</span>
+            <h2>{t("That's a night to look forward to.")}</h2>
+            <p>{t("Your tickets are below and on their way to your inbox.")}</p>
           </div>
         </div>
       )}
       <PageIntro
-        eyebrow={`Order / ${order.id.slice(0, 8).toUpperCase()}`}
+        eyebrow={t("Order / {toUpperCase}", { toUpperCase: order.id.slice(0, 8).toUpperCase() })}
         title={order.event_title}
         description={`${longDate(order.event_start_at, order.event_timezone)} · ${zoneName(order.event_timezone)}`}
       />
@@ -852,50 +834,37 @@ function OrderView({
         <section className="payment-panel">
           {hold ? (
             <>
-              <span className="eyebrow">Places held for {hold}</span>
-              <h2>Pay {price(order.total_kzt)} to confirm.</h2>
-              <p className="muted">
-                Payment is simulated: no card details are taken and no money moves. Choose how the
-                test payment should end.
-              </p>
+              <span className="eyebrow">{t("Places held for {hold}", { hold: hold })}</span>
+              <h2>{t("Pay {price} to confirm.", { price: price(order.total_kzt) })}</h2>
+              <p className="muted">{t("Payment is simulated: no card details are taken and no money moves. Choose how the test payment should end.")}</p>
               {failedPayments.length > 0 && (
-                <Notice error>
-                  The last payment attempt failed
-                  {failedPayments.at(-1)?.failure_reason ? `: ${failedPayments.at(-1)?.failure_reason}` : ""}. Your
-                  places are still held.
-                </Notice>
+                <Notice error>{t("The last payment attempt failed{n0}. Your places are still held.", { n0: failedPayments.at(-1)?.failure_reason ? `: ${failedPayments.at(-1)?.failure_reason}` : "" })}</Notice>
               )}
               <div className="button-row">
                 <button
                   className="btn btn-primary"
                   disabled={!!busy}
-                  onClick={() => act("pay", () => api.orders.pay(order.id), "Payment received. Your tickets are ready.")}
+                  onClick={() => act("pay", () => api.orders.pay(order.id), t("Payment received. Your tickets are ready."))}
                 >
-                  {busy === "pay" ? "Paying…" : "Pay now (simulated)"}
+                  {busy === "pay" ? t("Paying…") : t("Pay now (simulated)")}
                 </button>
                 <button
                   className="btn btn-secondary"
                   disabled={!!busy}
                   onClick={() => act("fail", () => api.orders.pay(order.id, "failure"))}
-                >
-                  Simulate a declined card
-                </button>
+                >{t("Simulate a declined card")}</button>
                 <button
                   className="text-link"
                   disabled={!!busy}
-                  onClick={() => act("cancel", () => api.orders.cancel(order.id), "Checkout cancelled. The places were released.")}
-                >
-                  Cancel checkout
-                </button>
+                  onClick={() => act("cancel", () => api.orders.cancel(order.id), t("Checkout cancelled. The places were released."))}
+                >{t("Cancel checkout")}</button>
               </div>
             </>
           ) : (
             <>
-              <h2>Your hold ran out.</h2>
-              <p className="muted">The places went back on sale. You can start again from the event page.</p>
-              <Link className="btn btn-primary" href={`/events/${order.event_id}`}>
-                Back to the event
-              </Link>
+              <h2>{t("Your hold ran out.")}</h2>
+              <p className="muted">{t("The places went back on sale. You can start again from the event page.")}</p>
+              <Link className="btn btn-primary" href={`/events/${order.event_id}`}>{t("Back to the event")}</Link>
             </>
           )}
         </section>
@@ -903,20 +872,20 @@ function OrderView({
 
       <div className="order-detail-meta">
         <div>
-          <small>Booked by</small>
+          <small>{t("Booked by")}</small>
           <strong>{order.buyer_name}</strong>
           <span>{order.buyer_email}</span>
         </div>
         <div>
-          <small>Order total</small>
+          <small>{t("Order total")}</small>
           <strong>{price(order.total_kzt)}</strong>
           <span>
-            {order.discount_kzt > 0 && `${price(order.discount_kzt)} off with ${order.promo_code} · `}
+            {order.discount_kzt > 0 && t("{price} off with {promo_code} · ", { price: price(order.discount_kzt), promo_code: order.promo_code })}
             {eventDate(order.created_at, order.event_timezone, { day: "numeric", month: "short", year: "numeric" })}
           </span>
         </div>
         <span className={`status-badge ${order.status === "confirmed" ? "status-live" : ""}`}>
-          {pending && !hold ? "Hold ran out" : ORDER_STATUS_LABEL[order.status]}
+          {pending && !hold ? t("Hold ran out") : ORDER_STATUS_LABEL[order.status]}
         </span>
       </div>
 
@@ -934,41 +903,40 @@ function OrderView({
 
       {order.refund && (
         <Notice>
-          Refunded {price(order.refund.amount_kzt)} on{" "}
-          {eventDate(order.refund.created_at, order.event_timezone, { day: "numeric", month: "long" })}
-          {order.refund.reason ? ` — ${order.refund.reason}` : ""}. The tickets are no longer valid.
-          {order.refund.is_simulated && " (Simulated refund: no money moved.)"}
+          {t("Refunded {price} on {eventDate}{n2}. The tickets are no longer valid.{n3}", {
+            price: price(order.refund.amount_kzt),
+            eventDate: eventDate(order.refund.created_at, order.event_timezone, { day: "numeric", month: "long" }),
+            n2: order.refund.reason ? ` — ${order.refund.reason}` : "",
+            n3: order.refund.is_simulated ? t(" (Simulated refund: no money moved.)") : "",
+          })}
         </Notice>
       )}
       {order.status === "cancelled" && !order.refund && (
-        <Notice>This order was cancelled. Its tickets are no longer valid.</Notice>
+        <Notice>{t("This order was cancelled. Its tickets are no longer valid.")}</Notice>
       )}
-      {order.status === "expired" && <Notice>The checkout hold ran out before payment.</Notice>}
+      {order.status === "expired" && <Notice>{t("The checkout hold ran out before payment.")}</Notice>}
 
       <div className="button-row">
-        <SupportLink eventId={order.event_id} orderId={order.id} label="Get help with this order" />
+        <SupportLink eventId={order.event_id} orderId={order.id} label={t("Get help with this order")} />
         {order.status === "confirmed" && upcoming && order.calendar_links?.google && (
           <a className="btn btn-secondary" href={order.calendar_links.google} target="_blank" rel="noreferrer">
-            <Icon name="calendar" size={16} /> Google Calendar
-          </a>
+            <Icon name="calendar" size={16} />{" "}{t("Google Calendar")}</a>
         )}
         {order.status === "confirmed" && upcoming && (
           <a className="btn btn-secondary" href={api.events.calendarFile(order.event_id)} download>
-            <Icon name="calendar" size={16} /> Calendar file
-          </a>
+            <Icon name="calendar" size={16} />{" "}{t("Calendar file")}</a>
         )}
         {order.status === "confirmed" && isBuyer && tickets.length > 1 && (
           <a className="btn btn-secondary" href={api.orders.pdf(order.id)} download>
-            <Icon name="download" size={16} /> All tickets (PDF)
-          </a>
+            <Icon name="download" size={16} />{" "}{t("All tickets (PDF)")}</a>
         )}
       </div>
 
       {tickets.length > 0 && (
         <>
           <div className="section-heading tickets-section-heading">
-            <h2>Your tickets</h2>
-            <span className="muted">Each guest has their own QR code.</span>
+            <h2>{t("Your tickets")}</h2>
+            <span className="muted">{t("Each guest has their own QR code.")}</span>
           </div>
           <div className="admission-grid">
             {tickets.map((ticket) => (
@@ -982,30 +950,25 @@ function OrderView({
         <div className="order-note">
           {free ? (
             <details>
-              <summary>Can’t make it? Cancel this registration</summary>
+              <summary>{t("Can’t make it? Cancel this registration")}</summary>
               <form
                 className="stack-form"
                 onSubmit={(e) => {
                   e.preventDefault();
                   const reason = String(new FormData(e.currentTarget).get("reason") ?? "").trim();
-                  void act("unregister", () => api.orders.cancelRegistration(order.id, reason), "Your registration was cancelled.");
+                  void act("unregister", () => api.orders.cancelRegistration(order.id, reason), t("Your registration was cancelled."));
                 }}
               >
-                <label>
-                  Reason (optional)
-                  <input name="reason" maxLength={500} />
+                <label>{t("Reason (optional)")}<input name="reason" maxLength={500} />
                 </label>
                 <button className="btn btn-secondary" disabled={!!busy}>
-                  {busy === "unregister" ? "Cancelling…" : "Cancel registration"}
+                  {busy === "unregister" ? t("Cancelling…") : t("Cancel registration")}
                 </button>
               </form>
             </details>
           ) : (
-            <p>
-              Need a refund? Refunds for paid tickets are handled by the organizer.{" "}
-              <Link className="text-link" href={`/support/new?event=${order.event_id}&order=${order.id}`}>
-                Ask for a refund
-              </Link>
+            <p>{t("Need a refund? Refunds for paid tickets are handled by the organizer.")}{" "}
+              <Link className="text-link" href={`/support/new?event=${order.event_id}&order=${order.id}`}>{t("Ask for a refund")}</Link>
             </p>
           )}
         </div>
@@ -1015,13 +978,14 @@ function OrderView({
 }
 
 function MissingEvent() {
+  const t = useT();
   return (
     <main className="workspace">
       <EmptyState
-        title="This one isn’t on the bill."
-        description="The event may be a draft, or the link may have changed."
+        title={t("This one isn’t on the bill.")}
+        description={t("The event may be a draft, or the link may have changed.")}
         href="/events"
-        label="See what’s on"
+        label={t("See what’s on")}
       />
     </main>
   );

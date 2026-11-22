@@ -3,6 +3,8 @@ import Link from "next/link";
 import { LandingEvents } from "@/components/event-pages";
 import { categoryValue } from "@/lib/events";
 import { BACKEND_URL } from "@/lib/server/backend";
+import { serverT } from "@/lib/i18n-server";
+import { tk } from "@/lib/i18n";
 
 /* -- category palette (kept in JS so gradients & dots can be dynamic) -- */
 const HUE: Record<string, string> = {
@@ -122,12 +124,12 @@ const Phone = ({ className }: IconProps) => (
 
 /* --------------------------- shared data --------------------------- */
 const CATEGORIES = [
-  { key: "cine", value: "cinema", label: "Cinema" },
-  { key: "concert", value: "concert", label: "Concerts" },
-  { key: "theatre", value: "theatre", label: "Theatre" },
-  { key: "fest", value: "festival", label: "Festivals" },
-  { key: "comedy", value: "comedy", label: "Comedy" },
-  { key: "sport", value: "sport", label: "Sport" },
+  { key: "cine", value: "cinema", label: tk("Cinema") },
+  { key: "concert", value: "concert", label: tk("Concerts") },
+  { key: "theatre", value: "theatre", label: tk("Theatre") },
+  { key: "fest", value: "festival", label: tk("Festivals") },
+  { key: "comedy", value: "comedy", label: tk("Comedy") },
+  { key: "sport", value: "sport", label: tk("Sport") },
 ];
 
 /** Upcoming public events per category, from the backend (cached for a minute). */
@@ -151,14 +153,14 @@ async function categoryCounts(): Promise<Record<string, number> | null> {
 }
 
 /* ----------------------- small presentational ---------------------- */
-function Wordmark({ className = "" }: { className?: string }) {
+async function Wordmark({ className = "" }: { className?: string }) {
+  const t = await serverT();
   return (
     <span className={`inline-flex items-center gap-2 ${className}`}>
       <span className="grid h-8 w-8 place-items-center rounded-lg bg-ember text-ink">
         <TicketMark className="h-5 w-5" />
       </span>
-      <span className="text-[1.35rem] font-semibold tracking-tight">
-        Bilet<span className="text-ember">Flow</span>
+      <span className="text-[1.35rem] font-semibold tracking-tight">{t("Bilet")}<span className="text-ember">{t("Flow")}</span>
       </span>
     </span>
   );
@@ -210,6 +212,7 @@ function fakeQR(size = 21) {
 
 /* ============================== page ============================== */
 export default async function Home() {
+  const t = await serverT();
   const counts = await categoryCounts();
   const qr = fakeQR(21);
 
@@ -219,16 +222,12 @@ export default async function Home() {
       <div className="border-b border-line bg-ink-800/60">
         <div className="mx-auto flex max-w-7xl items-center justify-center gap-3 px-5 py-2 text-center text-[0.8rem] text-muted">
           <span className="h-1.5 w-1.5 animate-pulse-soft rounded-full bg-ember" />
-          <span>
-            Autumn season is live —{" "}
-            <span className="text-cream">300+ nights out</span> across Almaty
-            &amp; Astana
-          </span>
+          <span>{t("Autumn season is live —")}{" "}
+            <span className="text-cream">{t("300+ nights out")}</span>{" "}{t("across Almaty & Astana")}</span>
           <Link
             href="#whatson"
             className="hidden items-center gap-1 font-medium text-ember hover:underline sm:inline-flex"
-          >
-            See what&apos;s on <Arrow className="h-3.5 w-3.5" />
+          >{t("See what's on")}{" "}<Arrow className="h-3.5 w-3.5" />
           </Link>
         </div>
       </div>
@@ -248,57 +247,47 @@ export default async function Home() {
           {/* left */}
           <div className="lg:col-span-7">
             <span className="inline-flex items-center gap-2 rounded-full border border-line bg-ink-800/60 px-3 py-1.5 font-mono text-[0.72rem] uppercase tracking-widest text-cream/70">
-              <span className="h-1.5 w-1.5 animate-pulse-soft rounded-full bg-ember" />
-              Now on sale
-            </span>
+              <span className="h-1.5 w-1.5 animate-pulse-soft rounded-full bg-ember" />{t("Now on sale")}</span>
 
-            <h1 className="mt-6 font-display text-5xl font-light leading-[0.98] tracking-tight text-cream sm:text-6xl lg:text-7xl">
-              Lights down.
-              <br />
-              <span className="italic text-ember">Goosebumps up.</span>
+            <h1 className="mt-6 font-display text-5xl font-light leading-[0.98] tracking-tight text-cream sm:text-6xl lg:text-7xl">{t("Lights down.")}<br />
+              <span className="italic text-ember">{t("Goosebumps up.")}</span>
             </h1>
 
-            <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted">
-              BiletFlow is where Almaty and Astana find what&apos;s on tonight —
-              cinema, concerts, theatre and everything worth leaving the house
-              for. Real seats, on your phone, in under a minute.
-            </p>
+            <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted">{t("BiletFlow is where Almaty and Astana find what's on tonight — cinema, concerts, theatre and everything worth leaving the house for. Real seats, on your phone, in under a minute.")}</p>
 
             {/* search */}
             <form
-              action="/events"
+              action={t("/events")}
               className="mt-8 max-w-2xl rounded-2xl border border-line bg-ink-800/80 p-2 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] backdrop-blur sm:flex sm:items-stretch"
             >
               <label className="flex flex-1 items-center gap-3 rounded-xl px-4 py-3 focus-within:bg-ink-700/60">
                 <Search className="h-5 w-5 shrink-0 text-cream/40" />
-                <span className="sr-only">Event, artist or film</span>
+                <span className="sr-only">{t("Event, artist or film")}</span>
                 <input
                   type="text"
                   name="q"
-                  placeholder="Event, artist or film"
+                  placeholder={t("Event, artist or film")}
                   className="w-full bg-transparent text-[0.95rem] text-cream placeholder:text-muted focus:outline-none"
                 />
               </label>
               <div className="mx-1 hidden w-px self-stretch bg-line sm:block" />
               <label className="flex items-center gap-3 rounded-xl px-4 py-3 focus-within:bg-ink-700/60">
                 <Pin className="h-5 w-5 shrink-0 text-cream/40" />
-                <span className="sr-only">City</span>
+                <span className="sr-only">{t("City")}</span>
                 <select
                   name="city"
                   className="cursor-pointer appearance-none bg-transparent text-[0.95rem] text-cream focus:outline-none"
                   defaultValue="Almaty"
                 >
-                  <option className="bg-ink-800">Almaty</option>
-                  <option className="bg-ink-800">Astana</option>
-                  <option className="bg-ink-800">Shymkent</option>
+                  <option className="bg-ink-800">{t("Almaty")}</option>
+                  <option className="bg-ink-800">{t("Astana")}</option>
+                  <option className="bg-ink-800">{t("Shymkent")}</option>
                 </select>
               </label>
               <button
                 type="submit"
                 className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-ember px-6 py-3 text-[0.95rem] font-semibold text-ink transition-colors hover:bg-ember-600 sm:mt-0 sm:w-auto"
-              >
-                Search
-                <Arrow className="h-4 w-4" />
+              >{t("Search")}<Arrow className="h-4 w-4" />
               </button>
             </form>
 
@@ -310,12 +299,11 @@ export default async function Home() {
                     <Star key={i} className="h-3.5 w-3.5" />
                   ))}
                 </span>
-                <span className="text-cream">4.9</span> from 12,000+ nights out
-              </span>
+                <span className="text-cream">4.9</span>{" "}{t("from 12,000+ nights out")}</span>
               <span className="hidden h-4 w-px bg-line sm:block" />
-              <span>No booking fee under ₸500</span>
+              <span>{t("No booking fee under ₸500")}</span>
               <span className="hidden h-4 w-px bg-line sm:block" />
-              <span>Instant mobile tickets</span>
+              <span>{t("Instant mobile tickets")}</span>
             </div>
           </div>
 
@@ -335,28 +323,18 @@ export default async function Home() {
                     <span
                       className="pointer-events-none absolute -bottom-6 -left-2 font-display text-[5rem] font-light leading-none opacity-10"
                       style={{ color: HUE.concert }}
-                    >
-                      Live
-                    </span>
+                    >{t("Live")}</span>
                     <span className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-ink/70 px-2.5 py-1 text-[0.68rem] font-medium uppercase tracking-wider text-cream backdrop-blur">
-                      <CatDot hue={HUE.concert} />
-                      Featured tonight
-                    </span>
+                      <CatDot hue={HUE.concert} />{t("Featured tonight")}</span>
                   </div>
                   <div className="p-5">
-                    <p className="font-mono text-[0.68rem] uppercase tracking-widest text-clay/50">
-                      Concert · piano &amp; light
-                    </p>
-                    <h3 className="mt-1 font-display text-2xl font-medium leading-tight tracking-tight text-clay">
-                      Nocturne
-                    </h3>
+                    <p className="font-mono text-[0.68rem] uppercase tracking-widest text-clay/50">{t("Concert · piano & light")}</p>
+                    <h3 className="mt-1 font-display text-2xl font-medium leading-tight tracking-tight text-clay">{t("Nocturne")}</h3>
                     <div className="mt-4 space-y-1 text-sm text-clay/70">
                       <p className="flex items-center gap-2">
-                        <Pin className="h-4 w-4" /> Rixos Hall, Astana
-                      </p>
+                        <Pin className="h-4 w-4" />{" "}{t("Rixos Hall, Astana")}</p>
                       <p className="flex items-center gap-2 font-mono text-[0.78rem]">
-                        <Calendar className="h-4 w-4" /> SAT 8 NOV · 20:00
-                      </p>
+                        <Calendar className="h-4 w-4" />{" "}{t("SAT 8 NOV · 20:00")}</p>
                     </div>
                   </div>
                 </div>
@@ -367,28 +345,20 @@ export default async function Home() {
                 {/* tear-off stub */}
                 <div className="flex w-[122px] shrink-0 flex-col justify-between p-4 text-clay">
                   <div>
-                    <p className="font-mono text-[0.6rem] uppercase tracking-[0.2em] text-clay/50">
-                      Admit one
-                    </p>
-                    <p className="mt-2 font-mono text-sm font-semibold">
-                      ROW C
-                    </p>
-                    <p className="font-mono text-sm font-semibold">SEAT 14</p>
+                    <p className="font-mono text-[0.6rem] uppercase tracking-[0.2em] text-clay/50">{t("Admit one")}</p>
+                    <p className="mt-2 font-mono text-sm font-semibold">{t("ROW C")}</p>
+                    <p className="font-mono text-sm font-semibold">{t("SEAT 14")}</p>
                   </div>
                   <div className="barcode my-3 rounded-sm" />
                   <div>
-                    <p className="font-mono text-[0.6rem] uppercase tracking-[0.2em] text-clay/50">
-                      Price
-                    </p>
+                    <p className="font-mono text-[0.6rem] uppercase tracking-[0.2em] text-clay/50">{t("Price")}</p>
                     <p className="text-lg font-semibold">₸12,000</p>
                   </div>
                 </div>
               </div>
 
               {/* little caption, hand-placed */}
-              <p className="mt-6 -rotate-1 text-center font-display text-sm italic text-muted">
-                “sold out in 40 minutes last spring.”
-              </p>
+              <p className="mt-6 -rotate-1 text-center font-display text-sm italic text-muted">{t("“sold out in 40 minutes last spring.”")}</p>
             </div>
           </div>
         </div>
@@ -404,11 +374,11 @@ export default async function Home() {
               >
                 <CatDot hue={HUE[c.key]} />
                 <span className="text-sm font-medium text-cream">
-                  {c.label}
+                  {t(c.label)}
                 </span>
                 {counts && (
                   <span className="font-mono text-[0.72rem] text-muted">
-                    {counts[c.value] ? `${counts[c.value]} upcoming` : "nothing yet"}
+                    {counts[c.value] ? t("{n0} upcoming", { n0: counts[c.value] }) : t("nothing yet")}
                   </span>
                 )}
               </Link>
@@ -424,21 +394,17 @@ export default async function Home() {
       >
         <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
           <div>
-            <p className="font-mono text-[0.72rem] uppercase tracking-widest text-ember">
-              This week
-            </p>
-            <h2 className="mt-3 font-display text-4xl font-light tracking-tight text-cream sm:text-5xl">
-              What&apos;s on
-            </h2>
+            <p className="font-mono text-[0.72rem] uppercase tracking-widest text-ember">{t("This week")}</p>
+            <h2 className="mt-3 font-display text-4xl font-light tracking-tight text-cream sm:text-5xl">{t("What's on")}</h2>
           </div>
           <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
             {[
-              "All",
-              "Cinema",
-              "Concerts",
-              "Theatre",
-              "Sport",
-              "This weekend",
+              t("All"),
+              t("Cinema"),
+              t("Concerts"),
+              t("Theatre"),
+              t("Sport"),
+              t("This weekend"),
             ].map((f, i) => (
               <Link
                 href={
@@ -469,9 +435,7 @@ export default async function Home() {
           <Link
             href="/events"
             className="inline-flex items-center gap-2 rounded-full border border-line px-6 py-3 text-sm font-medium text-cream transition-colors hover:border-cream/30 hover:bg-ink-800"
-          >
-            Explore all events
-            <Arrow className="h-4 w-4" />
+          >{t("Explore all events")}<Arrow className="h-4 w-4" />
           </Link>
         </div>
       </section>
@@ -481,18 +445,9 @@ export default async function Home() {
         <div className="mx-auto grid max-w-7xl gap-14 px-5 py-20 lg:grid-cols-12 lg:py-28">
           <div className="lg:col-span-4">
             <div className="lg:sticky lg:top-28">
-              <p className="font-mono text-[0.72rem] uppercase tracking-widest text-ember">
-                Why BiletFlow
-              </p>
-              <h2 className="mt-3 font-display text-4xl font-light leading-tight tracking-tight text-cream sm:text-5xl">
-                Less faff.
-                <br />
-                More show.
-              </h2>
-              <p className="mt-5 max-w-sm text-muted">
-                We built the boring parts so the only decision left is where to
-                sit.
-              </p>
+              <p className="font-mono text-[0.72rem] uppercase tracking-widest text-ember">{t("Why BiletFlow")}</p>
+              <h2 className="mt-3 font-display text-4xl font-light leading-tight tracking-tight text-cream sm:text-5xl">{t("Less faff.")}<br />{t("More show.")}</h2>
+              <p className="mt-5 max-w-sm text-muted">{t("We built the boring parts so the only decision left is where to sit.")}</p>
             </div>
           </div>
 
@@ -501,18 +456,18 @@ export default async function Home() {
               {[
                 {
                   n: "01",
-                  t: "On your phone, at the door",
-                  d: "Your ticket is a QR code the moment you pay. Drop it into Apple Wallet, or send it to a friend in a single tap. Nothing to print, nothing to leave on the kitchen table.",
+                  t: t("On your phone, at the door"),
+                  d: t("Your ticket is a QR code the moment you pay. Drop it into Apple Wallet, or send it to a friend in a single tap. Nothing to print, nothing to leave on the kitchen table."),
                 },
                 {
                   n: "02",
-                  t: "Pick the exact seat",
-                  d: "Real venue maps, not a lottery. See the stage from row H before you commit, and know precisely what you're paying for — down to the seat.",
+                  t: t("Pick the exact seat"),
+                  d: t("Real venue maps, not a lottery. See the stage from row H before you commit, and know precisely what you're paying for — down to the seat."),
                 },
                 {
                   n: "03",
-                  t: "Resale that isn't a rip-off",
-                  d: "Can't make it? Re-list at face value in seconds. Sold out? Buy verified seats from someone who couldn't go — never a tenge above the printed price.",
+                  t: t("Resale that isn't a rip-off"),
+                  d: t("Can't make it? Re-list at face value in seconds. Sold out? Buy verified seats from someone who couldn't go — never a tenge above the printed price."),
                 },
               ].map((row) => (
                 <li key={row.n} className="flex gap-6 py-8 first:pt-0">
@@ -535,25 +490,15 @@ export default async function Home() {
       {/* ------------------------- phone showcase ------------------------- */}
       <section className="mx-auto grid w-full max-w-7xl items-center gap-14 px-5 py-20 lg:grid-cols-2 lg:py-28">
         <div>
-          <p className="font-mono text-[0.72rem] uppercase tracking-widest text-ember">
-            On the night
-          </p>
-          <h2 className="mt-3 font-display text-4xl font-light leading-tight tracking-tight text-cream sm:text-5xl">
-            From your couch to
-            <br />
-            the coat check.
-          </h2>
-          <p className="mt-5 max-w-md text-lg leading-relaxed text-muted">
-            Open BiletFlow, tap the show, flash the code. We wake the QR up near
-            doors — so no screenshot, no scalper, and no “sorry, this one&apos;s
-            already been scanned.”
-          </p>
+          <p className="font-mono text-[0.72rem] uppercase tracking-widest text-ember">{t("On the night")}</p>
+          <h2 className="mt-3 font-display text-4xl font-light leading-tight tracking-tight text-cream sm:text-5xl">{t("From your couch to")}<br />{t("the coat check.")}</h2>
+          <p className="mt-5 max-w-md text-lg leading-relaxed text-muted">{t("Open BiletFlow, tap the show, flash the code. We wake the QR up near doors — so no screenshot, no scalper, and no “sorry, this one's already been scanned.”")}</p>
           <ul className="mt-8 space-y-4">
             {[
-              "Live QR that changes at the door",
-              "Add to Apple Wallet & Google Wallet",
-              "Transfer to a friend, even mid-show",
-              "Offline-ready — works when the signal doesn't",
+              t("Live QR that changes at the door"),
+              t("Add to Apple Wallet & Google Wallet"),
+              t("Transfer to a friend, even mid-show"),
+              t("Offline-ready — works when the signal doesn't"),
             ].map((li) => (
               <li key={li} className="flex items-center gap-3 text-cream/90">
                 <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-ember/15 text-ember">
@@ -580,17 +525,13 @@ export default async function Home() {
             <div className="overflow-hidden rounded-[2.1rem] bg-ink">
               {/* mini poster */}
               <div className="relative h-28" style={poster(HUE.concert)}>
-                <span className="absolute bottom-3 left-4 font-display text-lg font-medium text-cream">
-                  Nocturne
-                </span>
-                <span className="absolute right-4 top-4 rounded-full bg-fest/20 px-2 py-0.5 text-[0.6rem] font-medium uppercase tracking-wider text-fest">
-                  Valid
-                </span>
+                <span className="absolute bottom-3 left-4 font-display text-lg font-medium text-cream">{t("Nocturne")}</span>
+                <span className="absolute right-4 top-4 rounded-full bg-fest/20 px-2 py-0.5 text-[0.6rem] font-medium uppercase tracking-wider text-fest">{t("Valid")}</span>
               </div>
               <div className="space-y-4 p-5">
                 <div className="flex justify-between font-mono text-[0.65rem] uppercase tracking-widest text-muted">
-                  <span>Sat 8 Nov · 20:00</span>
-                  <span>Doors 19:15</span>
+                  <span>{t("Sat 8 Nov · 20:00")}</span>
+                  <span>{t("Doors 19:15")}</span>
                 </div>
                 {/* QR */}
                 <div className="mx-auto w-fit rounded-xl bg-paper p-3">
@@ -599,7 +540,7 @@ export default async function Home() {
                     style={{
                       gridTemplateColumns: "repeat(21, 6px)",
                     }}
-                    aria-label="Ticket QR code"
+                    aria-label={t("Ticket QR code")}
                   >
                     {qr.map((on, i) => (
                       <span
@@ -613,12 +554,10 @@ export default async function Home() {
                   </div>
                 </div>
                 <div className="flex items-center justify-between border-t border-line pt-3 font-mono text-[0.7rem] text-cream/80">
-                  <span>ROW C · SEAT 14</span>
-                  <span className="text-fest">● live</span>
+                  <span>{t("ROW C · SEAT 14")}</span>
+                  <span className="text-fest">{t("● live")}</span>
                 </div>
-                <div className="rounded-xl bg-ember py-2.5 text-center text-sm font-semibold text-ink">
-                  Tap to scan at door
-                </div>
+                <div className="rounded-xl bg-ember py-2.5 text-center text-sm font-semibold text-ink">{t("Tap to scan at door")}</div>
               </div>
             </div>
           </div>
@@ -632,19 +571,12 @@ export default async function Home() {
             <span className="font-display text-6xl leading-none text-ember">
               “
             </span>
-            <blockquote className="-mt-6 font-display text-3xl font-light leading-snug tracking-tight text-cream sm:text-4xl">
-              I found last-minute seats to a sold-out gig while standing on the
-              metro platform. Paid, and the QR was on my phone before my train
-              pulled in. That&apos;s the whole magic — it just gets out of the
-              way.
-            </blockquote>
+            <blockquote className="-mt-6 font-display text-3xl font-light leading-snug tracking-tight text-cream sm:text-4xl">{t("I found last-minute seats to a sold-out gig while standing on the metro platform. Paid, and the QR was on my phone before my train pulled in. That's the whole magic — it just gets out of the way.")}</blockquote>
             <div className="mt-8 flex items-center gap-3">
-              <span className="grid h-11 w-11 place-items-center rounded-full bg-concert/20 font-display text-lg text-concert">
-                D
-              </span>
+              <span className="grid h-11 w-11 place-items-center rounded-full bg-concert/20 font-display text-lg text-concert">{t("D")}</span>
               <div className="text-sm">
-                <p className="font-medium text-cream">Dana K.</p>
-                <p className="text-muted">concert-goer · Almaty</p>
+                <p className="font-medium text-cream">{t("Dana K.")}</p>
+                <p className="text-muted">{t("concert-goer · Almaty")}</p>
               </div>
             </div>
           </div>
@@ -678,29 +610,19 @@ export default async function Home() {
         />
         <div className="relative mx-auto max-w-3xl px-5 py-24 text-center lg:py-32">
           <Phone className="mx-auto h-8 w-8 text-ember" />
-          <h2 className="mt-6 font-display text-5xl font-light leading-tight tracking-tight text-cream sm:text-6xl">
-            The lights are about
-            <br />
-            to <span className="italic text-ember">go down.</span>
+          <h2 className="mt-6 font-display text-5xl font-light leading-tight tracking-tight text-cream sm:text-6xl">{t("The lights are about")}<br />{t("to")}{" "}<span className="italic text-ember">{t("go down.")}</span>
           </h2>
-          <p className="mx-auto mt-5 max-w-lg text-lg text-muted">
-            Find what&apos;s on tonight in Almaty and Astana — and be the one
-            who already has the tickets.
-          </p>
+          <p className="mx-auto mt-5 max-w-lg text-lg text-muted">{t("Find what's on tonight in Almaty and Astana — and be the one who already has the tickets.")}</p>
           <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link
               href="#whatson"
               className="inline-flex items-center justify-center gap-2 rounded-full bg-ember px-7 py-3.5 text-base font-semibold text-ink transition-colors hover:bg-ember-600"
-            >
-              Browse what&apos;s on
-              <Arrow className="h-4 w-4" />
+            >{t("Browse what's on")}<Arrow className="h-4 w-4" />
             </Link>
             <Link
               href="/organizer/events/new"
               className="inline-flex items-center justify-center rounded-full border border-line px-7 py-3.5 text-base font-medium text-cream transition-colors hover:border-cream/30 hover:bg-ink-800"
-            >
-              List your event
-            </Link>
+            >{t("List your event")}</Link>
           </div>
         </div>
       </section>
@@ -711,44 +633,42 @@ export default async function Home() {
           <div className="grid gap-12 lg:grid-cols-12">
             <div className="lg:col-span-4">
               <Wordmark />
-              <p className="mt-4 max-w-xs font-display text-lg italic text-muted">
-                Tickets for the nights worth remembering.
-              </p>
+              <p className="mt-4 max-w-xs font-display text-lg italic text-muted">{t("Tickets for the nights worth remembering.")}</p>
             </div>
 
             <div className="grid grid-cols-2 gap-8 sm:grid-cols-4 lg:col-span-8">
               {[
                 {
-                  h: "Discover",
+                  h: t("Discover"),
                   links: [
-                    ["Cinema", "/events?category=Cinema"],
-                    ["Concerts", "/events?category=Concerts"],
-                    ["Theatre", "/events?category=Theatre"],
-                    ["Sport", "/events?category=Sport"],
-                    ["Weekends", "/events?when=weekend"],
+                    [t("Cinema"), "/events?category=Cinema"],
+                    [t("Concerts"), "/events?category=Concerts"],
+                    [t("Theatre"), "/events?category=Theatre"],
+                    [t("Sport"), "/events?category=Sport"],
+                    [t("Weekends"), "/events?when=weekend"],
                   ],
                 },
                 {
-                  h: "Organisers",
+                  h: t("Organisers"),
                   links: [
-                    ["Create an event", "/organizer/events/new"],
-                    ["Your box office", "/organizer"],
-                    ["Check-in desk", "/check-in"],
+                    [t("Create an event"), "/organizer/events/new"],
+                    [t("Your box office"), "/organizer"],
+                    [t("Check-in desk"), "/check-in"],
                   ],
                 },
                 {
-                  h: "Your tickets",
+                  h: t("Your tickets"),
                   links: [
-                    ["My orders", "/orders"],
-                    ["Browse events", "/events"],
+                    [t("My orders"), "/orders"],
+                    [t("Browse events"), "/events"],
                   ],
                 },
                 {
-                  h: "Join in",
+                  h: t("Join in"),
                   links: [
-                    ["Sign in", "/sign-in"],
-                    ["Attendee profile", "/register"],
-                    ["Organizer profile", "/register?role=organizer"],
+                    [t("Sign in"), "/sign-in"],
+                    [t("Attendee profile"), "/register"],
+                    [t("Organizer profile"), "/register?role=organizer"],
                   ],
                 },
               ].map((col) => (
@@ -774,11 +694,11 @@ export default async function Home() {
           </div>
 
           <div className="mt-14 flex flex-col items-start justify-between gap-4 border-t border-line pt-8 text-sm text-muted sm:flex-row sm:items-center">
-            <p>© 2026 BiletFlow. Made for nights out in Kazakhstan.</p>
+            <p>{t("© 2026 BiletFlow. Made for nights out in Kazakhstan.")}</p>
             <div className="flex items-center gap-5">
-              <span className="font-mono text-[0.75rem]">₸ KZT</span>
+              <span className="font-mono text-[0.75rem]">{t("₸ KZT")}</span>
               <span className="h-4 w-px bg-line" />
-              <span>Payments simulated</span>
+              <span>{t("Payments simulated")}</span>
             </div>
           </div>
         </div>

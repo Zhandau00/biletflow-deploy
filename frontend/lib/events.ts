@@ -4,6 +4,8 @@
  * prices, availability and image links).
  */
 
+import { formatDate, getLang, tk, tr, translatedOptions } from "./i18n";
+
 export type EventLifecycle = "draft" | "upcoming" | "active" | "completed" | "cancelled";
 export type SaleStatus = "hidden" | "scheduled" | "on_sale" | "sold_out" | "ended";
 
@@ -68,15 +70,15 @@ export type CalendarLinks = { ics: string; google: string; outlook: string; yaho
 /** Categories offered on the site: the value stored on the event, the label
  *  shown, and the poster style used when the event has no image. */
 export const CATEGORIES = [
-  { value: "concert", label: "Concerts", poster: "concert" },
-  { value: "cinema", label: "Cinema", poster: "cine" },
-  { value: "theatre", label: "Theatre", poster: "theatre" },
-  { value: "festival", label: "Festivals", poster: "fest" },
-  { value: "comedy", label: "Comedy", poster: "comedy" },
-  { value: "sport", label: "Sport", poster: "sport" },
+  { value: "concert", label: tk("Concerts"), poster: "concert" },
+  { value: "cinema", label: tk("Cinema"), poster: "cine" },
+  { value: "theatre", label: tk("Theatre"), poster: "theatre" },
+  { value: "festival", label: tk("Festivals"), poster: "fest" },
+  { value: "comedy", label: tk("Comedy"), poster: "comedy" },
+  { value: "sport", label: tk("Sport"), poster: "sport" },
 ] as const;
 
-export const CITIES = ["Almaty", "Astana", "Shymkent"];
+export const CITIES = [tk("Almaty"), tk("Astana"), tk("Shymkent")];
 
 const findCategory = (value?: string | null) => {
   const key = value?.trim().toLowerCase();
@@ -87,7 +89,7 @@ const findCategory = (value?: string | null) => {
 export const categoryValue = (raw?: string | null) => findCategory(raw)?.value ?? "";
 
 export const categoryLabel = (value?: string | null) =>
-  findCategory(value)?.label ?? (value ? value[0].toUpperCase() + value.slice(1) : "Event");
+  tr(findCategory(value)?.label ?? (value ? value[0].toUpperCase() + value.slice(1) : tk("Event")));
 
 export const posterStyle = (value?: string | null) => findCategory(value)?.poster ?? "concert";
 
@@ -101,7 +103,7 @@ export function mediaUrl(url?: string | null) {
 }
 
 export const price = (value: number) =>
-  value === 0 ? "Free" : `₸${value.toLocaleString("en-US")}`;
+  value === 0 ? tr("Free") : `₸${value.toLocaleString("en-US")}`;
 
 /** Date and time in the event's own time zone (falls back to Almaty). */
 export function eventDate(
@@ -110,11 +112,9 @@ export function eventDate(
   options: Intl.DateTimeFormatOptions = { day: "numeric", month: "short" },
 ) {
   try {
-    return new Intl.DateTimeFormat("en-GB", { timeZone, ...options }).format(new Date(iso));
+    return formatDate(getLang(), new Date(iso), { timeZone, ...options });
   } catch {
-    return new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Almaty", ...options }).format(
-      new Date(iso),
-    );
+    return formatDate(getLang(), new Date(iso), { timeZone: "Asia/Almaty", ...options });
   }
 }
 
@@ -123,52 +123,52 @@ export const eventTime = (iso: string, timeZone: string) =>
 
 /** "Asia/Almaty" → "Almaty time". */
 export const zoneName = (timeZone: string) =>
-  `${timeZone.split("/").pop()?.replace(/_/g, " ") ?? timeZone} time`;
+  tr("{zone} time", { zone: tr(timeZone.split("/").pop()?.replace(/_/g, " ") ?? timeZone) });
 
 export const venueLine = (event: Pick<ApiEvent, "venue_name" | "city">) =>
-  [event.venue_name, event.city].filter(Boolean).join(" · ") || "Venue to be announced";
+  [event.venue_name, event.city].filter(Boolean).join(" · ") || tr("Venue to be announced");
 
 /** What a card says about tickets: price, or why they cannot be bought. */
 export function cardStatus(event: ListedEvent): { label: string; action: string } {
-  if (event.lifecycle === "cancelled") return { label: "Cancelled", action: "Details" };
+  if (event.lifecycle === "cancelled") return { label: tr("Cancelled"), action: tr("Details") };
   if (event.price_from_kzt === null || !event.sale_state)
-    return { label: "Tickets soon", action: "Details" };
-  if (event.sale_state === "sold_out") return { label: "Sold out", action: "Details" };
-  if (event.sale_state === "ended") return { label: "Sales ended", action: "Details" };
-  if (event.sale_state === "scheduled") return { label: "On sale soon", action: "Details" };
+    return { label: tr("Tickets soon"), action: tr("Details") };
+  if (event.sale_state === "sold_out") return { label: tr("Sold out"), action: tr("Details") };
+  if (event.sale_state === "ended") return { label: tr("Sales ended"), action: tr("Details") };
+  if (event.sale_state === "scheduled") return { label: tr("On sale soon"), action: tr("Details") };
   // The cheapest type is paid, so every type is: nothing to buy yet
   if (event.price_from_kzt > 0 && !event.paid_sales_open)
-    return { label: "Sales open soon", action: "Details" };
+    return { label: tr("Sales open soon"), action: tr("Details") };
   return {
-    label: event.price_from_kzt ? `from ${price(event.price_from_kzt)}` : "Free",
-    action: event.price_from_kzt ? "Get tickets" : "Register",
+    label: event.price_from_kzt ? tr("from {price}", { price: price(event.price_from_kzt) }) : tr("Free"),
+    action: event.price_from_kzt ? tr("Get tickets") : tr("Register"),
   };
 }
 
 /** Why a ticket type cannot be chosen right now, or null when it can. */
 export function ticketBlock(ticket: TicketType, event: ApiEvent, now = Date.now()): string | null {
-  if (event.lifecycle === "cancelled") return "Event cancelled";
-  if (event.lifecycle === "completed") return "Event has ended";
-  if (ticket.sale_status === "sold_out" || ticket.available <= 0) return "Sold out";
-  if (ticket.sale_status === "ended") return "Sales have ended";
+  if (event.lifecycle === "cancelled") return tr("Event cancelled");
+  if (event.lifecycle === "completed") return tr("Event has ended");
+  if (ticket.sale_status === "sold_out" || ticket.available <= 0) return tr("Sold out");
+  if (ticket.sale_status === "ended") return tr("Sales have ended");
   if (ticket.sale_status === "scheduled")
     return ticket.sale_start && new Date(ticket.sale_start).getTime() > now
-      ? `On sale ${eventDate(ticket.sale_start, event.timezone, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false })}`
-      : "Not on sale yet";
-  if (ticket.sale_status !== "on_sale") return "Not available";
-  if (ticket.price_kzt > 0 && !event.paid_sales_open) return "Paid sales are not open yet";
+      ? tr("On sale {date}", { date: eventDate(ticket.sale_start, event.timezone, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false }) })
+      : tr("Not on sale yet");
+  if (ticket.sale_status !== "on_sale") return tr("Not available");
+  if (ticket.price_kzt > 0 && !event.paid_sales_open) return tr("Paid sales are not open yet");
   return null;
 }
 
 /** Start and end of the date filters, in Almaty time, as ISO strings. */
 export type WhenFilter = "any" | "today" | "weekend" | "week" | "month";
-export const WHEN_OPTIONS: { value: WhenFilter; label: string }[] = [
-  { value: "any", label: "Any date" },
-  { value: "today", label: "Today" },
-  { value: "weekend", label: "This weekend" },
-  { value: "week", label: "Next 7 days" },
-  { value: "month", label: "Next 30 days" },
-];
+export const WHEN_OPTIONS: { value: WhenFilter; label: string }[] = translatedOptions([
+  { value: "any", label: tk("Any date") },
+  { value: "today", label: tk("Today") },
+  { value: "weekend", label: tk("This weekend") },
+  { value: "week", label: tk("Next 7 days") },
+  { value: "month", label: tk("Next 30 days") },
+]);
 
 const ALMATY_OFFSET_HOURS = 5; // Kazakhstan has used UTC+5 nationwide since 2024
 const DAY = 86_400_000;

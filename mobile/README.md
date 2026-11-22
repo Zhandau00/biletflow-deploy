@@ -9,6 +9,12 @@ The BiletFlow app for Android and iOS (Expo SDK 58, React Native, Expo Router). 
 - **Check-in desk:** pick an event, scan QR codes with the camera, type a code, search guests, admit and undo with a reason, live counts and history.
 - **Platform admins:** overview and global search, users, organizer checks, events, orders, payments with refunds and disputes, event reports, paid-sales activations, platform support queue, promo activity, settings, audit history, CSV exports.
 
+## Languages
+
+The attendee screens (events, checkout, tickets, account, sign-in, support, notifications) are in Kazakh, Russian and English. The switch on the Account tab (and on sign-up) changes it at once; it is remembered on the phone, and for a signed-in account it is saved as the profile language, so the website, emails and notifications follow. Without a choice the phone's language decides. Organizer, check-in and admin screens stay in English.
+
+Screens write English inside `t("…")` from `useT()` (`src/lib/i18n.ts`); the Russian and Kazakh versions are in `src/locales/ru.json` and `src/locales/kk.json`, the same files as the website's. `npm test` fails when a text has no translation.
+
 ## How it connects
 
 The website keeps tokens in httpOnly cookies behind its own proxy. The app calls the backend directly, keeps the access and refresh tokens in the phone's secure storage (`expo-secure-store`), sends `Authorization: Bearer …`, and swaps an expired access token for a new pair once before retrying. See `src/lib/client.ts`.

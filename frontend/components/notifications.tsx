@@ -9,9 +9,11 @@ import { safeLink, type AppNotification } from "@/lib/support";
 import { useSession } from "./session-provider";
 import { useLoad } from "./use-load";
 import { EmptyState, Icon, LoadingPage, Notice, PageIntro } from "./primitives";
+import { useT } from "@/components/language";
+import { formatDate, getLang } from "@/lib/i18n";
 
 const stamp = (value: string) =>
-  new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Almaty" }).format(new Date(value));
+  formatDate(getLang(), new Date(value), { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Almaty" });
 
 // Pages that mark notifications read tell the bell to look again
 const CHANGED = "biletflow:notifications";
@@ -19,6 +21,7 @@ const announce = () => window.dispatchEvent(new Event(CHANGED));
 
 /** Header bell. Polls the cheap unread-count endpoint once a minute. */
 export function NotificationBell() {
+  const t = useT();
   const { user } = useSession();
   const [unread, setUnread] = useState(0);
   const [tick, setTick] = useState(0);
@@ -42,7 +45,7 @@ export function NotificationBell() {
   }, [user, tick]);
   if (!user) return null;
   return (
-    <Link className="notification-bell" href="/notifications" aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"}>
+    <Link className="notification-bell" href="/notifications" aria-label={unread ? t("Notifications, {unread} unread", { unread: unread }) : t("Notifications")}>
       <Icon name="bell" size={18} />
       {unread > 0 && <span className="notification-count">{unread > 99 ? "99+" : unread}</span>}
     </Link>
@@ -50,6 +53,7 @@ export function NotificationBell() {
 }
 
 export function NotificationsPage() {
+  const t = useT();
   const { user, ready } = useSession();
   const [version, setVersion] = useState(0);
   const [onlyUnread, setOnlyUnread] = useState(false);
@@ -67,7 +71,7 @@ export function NotificationsPage() {
       setVersion((v) => v + 1);
       announce();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not update notifications.");
+      setError(e instanceof Error ? e.message : t("Could not update notifications."));
     }
   }
 
@@ -75,7 +79,7 @@ export function NotificationsPage() {
   if (!user)
     return (
       <main className="workspace narrow-workspace">
-        <EmptyState icon="bell" title="Nothing to miss here." description="Sign in to see updates about your tickets, events and support cases." href="/sign-in?next=/notifications" label="Sign in" />
+        <EmptyState icon="bell" title={t("Nothing to miss here.")} description={t("Sign in to see updates about your tickets, events and support cases.")} href="/sign-in?next=/notifications" label={t("Sign in")} />
       </main>
     );
   const items = list.data ?? [];
@@ -83,20 +87,18 @@ export function NotificationsPage() {
   return (
     <main className="workspace narrow-workspace">
       <PageIntro
-        eyebrow="Keeping you posted"
-        title="Notifications."
-        description="Order, event and support updates, in the language set on your profile. Most of them also come by email."
+        eyebrow={t("Keeping you posted")}
+        title={t("Notifications.")}
+        description={t("Order, event and support updates, in the language set on your profile. Most of them also come by email.")}
         action={
           unread > 0 && (
             <button className="btn btn-secondary" onClick={() => act("/notifications/read-all")}>
-              <Icon name="check" size={15} /> Mark all read
-            </button>
+              <Icon name="check" size={15} />{" "}{t("Mark all read")}</button>
           )
         }
       />
       <label className="checkbox-label">
-        <input type="checkbox" checked={onlyUnread} onChange={(e) => setOnlyUnread(e.target.checked)} /> Only unread
-      </label>
+        <input type="checkbox" checked={onlyUnread} onChange={(e) => setOnlyUnread(e.target.checked)} />{" "}{t("Only unread")}</label>
       {(error || list.status === "error") && <Notice error>{error || (list.status === "error" ? list.error.message : "")}</Notice>}
       {!list.data ? (
         <LoadingPage />
@@ -119,16 +121,14 @@ export function NotificationsPage() {
                   <time dateTime={n.created_at}>{stamp(n.created_at)}</time>
                 </div>
                 {!n.is_read && (
-                  <button className="text-link" onClick={() => act(`/notifications/${n.id}/read`)} aria-label={`Mark read: ${n.message}`}>
-                    Mark read
-                  </button>
+                  <button className="text-link" onClick={() => act(`/notifications/${n.id}/read`)} aria-label={t("Mark read: {message}", { message: n.message })}>{t("Mark read")}</button>
                 )}
               </li>
             );
           })}
         </ol>
       ) : (
-        <EmptyState icon="bell" title={onlyUnread ? "All caught up." : "No notifications yet."} description="Updates about your orders, events and support cases appear here." />
+        <EmptyState icon="bell" title={onlyUnread ? t("All caught up.") : t("No notifications yet.")} description={t("Updates about your orders, events and support cases appear here.")} />
       )}
     </main>
   );

@@ -6,8 +6,10 @@ import { tokenFrom } from "@/components/auth";
 import { refreshSession, useSession } from "@/components/session";
 import { failure } from "@/components/use-load";
 import { Button, Field, Intro, Notice, Screen } from "@/components/ui";
+import { tk, useT } from "@/lib/i18n";
 
 export default function VerifyEmail() {
+  const t = useT();
   const params = useLocalSearchParams<{ token?: string }>();
   const { user } = useSession();
   const [link, setLink] = useState("");
@@ -21,7 +23,7 @@ export default function VerifyEmail() {
       setState({ status: "done" });
       void refreshSession();
     } catch (e) {
-      setState({ status: "error", text: failure(e, "This link could not be used.") });
+      setState({ status: "error", text: failure(e, tk("This link could not be used.")) });
     }
   }
 
@@ -33,19 +35,19 @@ export default function VerifyEmail() {
 
   return (
     <Screen>
-      <Intro eyebrow="Email address" title={state.status === "done" ? "You are confirmed." : "Confirming your email."} />
-      {state.status === "working" && <Notice>Checking your link…</Notice>}
+      <Intro eyebrow={t("Email address")} title={state.status === "done" ? t("You are confirmed.") : t("Confirming your email.")} />
+      {state.status === "working" && <Notice>{t("Checking your link…")}</Notice>}
       {state.status === "done" && (
         <>
-          <Notice>Thank you. Your email address is confirmed.</Notice>
-          <Button label={user ? "Find an event" : "Sign in"} icon="arrow-forward" onPress={() => router.replace(user ? "/" : "/sign-in")} />
+          <Notice>{t("Thank you. Your email address is confirmed.")}</Notice>
+          <Button label={user ? t("Find an event") : t("Sign in")} icon="arrow-forward" onPress={() => router.replace(user ? "/" : "/sign-in")} />
         </>
       )}
       {(state.status === "idle" || state.status === "error") && (
         <>
-          {state.status === "error" && <Notice error>{`${state.text} Links work once and expire; send a new one from your account.`}</Notice>}
-          <Field label="Link from the email" value={link} onChangeText={setLink} autoCapitalize="none" autoCorrect={false} placeholder="Paste the whole link or its code" />
-          <Button label="Confirm my email" disabled={!link.trim()} onPress={() => confirm(tokenFrom(link))} />
+          {state.status === "error" && <Notice error>{t("{text} Links work once and expire; send a new one from your account.", { text: state.text })}</Notice>}
+          <Field label={t("Link from the email")} value={link} onChangeText={setLink} autoCapitalize="none" autoCorrect={false} placeholder={t("Paste the whole link or its code")} />
+          <Button label={t("Confirm my email")} disabled={!link.trim()} onPress={() => confirm(tokenFrom(link))} />
         </>
       )}
     </Screen>

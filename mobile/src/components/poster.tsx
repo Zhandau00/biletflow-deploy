@@ -3,6 +3,7 @@ import { Image } from "expo-image";
 import { StyleSheet, Text, View } from "react-native";
 import { eventDate, eventTime } from "@/lib/events";
 import { color, poster as hues } from "./theme";
+import { useT } from "@/lib/i18n";
 
 export type PosterInfo = {
   id: string;
@@ -16,6 +17,7 @@ export type PosterInfo = {
 };
 
 export function Poster({ event, compact }: { event: PosterInfo; compact?: boolean }) {
+  const t = useT();
   const hue = hues[event.poster] ?? color.ember;
   const height = compact ? 120 : 220;
   if (event.image)
@@ -24,11 +26,11 @@ export function Poster({ event, compact }: { event: PosterInfo; compact?: boolea
         source={{ uri: event.image }}
         style={{ width: "100%", height, borderRadius: 16, backgroundColor: color.ink700 }}
         contentFit="cover"
-        accessibilityLabel={`Poster for ${event.title}`}
+        accessibilityLabel={t("Poster for {title}", { title: event.title })}
       />
     );
   return (
-    <View style={[st.poster, { height, backgroundColor: hue }]} accessibilityLabel={`Poster for ${event.title}`}>
+    <View style={[st.poster, { height, backgroundColor: hue }]} accessibilityLabel={t("Poster for {title}", { title: event.title })}>
       <View style={st.row}>
         <Text style={st.meta}>{event.category.toUpperCase()}</Text>
         <Text style={st.meta}>{event.city.toUpperCase()}</Text>
