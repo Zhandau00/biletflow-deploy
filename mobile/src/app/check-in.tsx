@@ -16,12 +16,14 @@ import { failure, useLoad } from "@/components/use-load";
 import { Avatar, Badge, Button, Card, Empty, Field, H2, Intro, Loading, Notice, Progress, Row, Screen, Select, T } from "@/components/ui";
 import { color } from "@/components/theme";
 
+import { useT } from "@/lib/i18n";
 const TONE: Record<string, string> = {
   valid: color.ok,
   already_used: color.gold,
 };
 
 export default function CheckIn() {
+  const t = useT();
   const { ready, user } = useSession();
   const [selected, setSelected] = useState("");
   const events = useLoad(`checkin-events:${user?.id ?? ""}`, async (signal) => {
@@ -46,22 +48,22 @@ export default function CheckIn() {
   if (!user)
     return (
       <Screen>
-        <Empty icon="people-outline" title="The door list lives here." description="Sign in with the account your organizer added to the event team." action="Sign in" onAction={() => signInFirst("/check-in")} />
+        <Empty icon="people-outline" title={t("The door list lives here.")} description={t("Sign in with the account your organizer added to the event team.")} action={t("Sign in")} onAction={() => signInFirst("/check-in")} />
       </Screen>
     );
   const list = events.data ?? [];
   const event = list.find((e) => e.id === selected) ?? list[0];
   return (
     <Screen>
-      <Intro eyebrow="First impressions count" title="Welcome them in." description="Scan a ticket or find a guest by name." />
-      {events.status === "error" && <Notice error>{events.error?.message ?? "Could not load your events."}</Notice>}
+      <Intro eyebrow={t("First impressions count")} title={t("Welcome them in.")} description={t("Scan a ticket or find a guest by name.")} />
+      {events.status === "error" && <Notice error>{events.error?.message ?? t("Could not load your events.")}</Notice>}
       {!events.data ? (
         <Loading />
       ) : event ? (
         <>
           {list.length > 1 && (
             <Select
-              label="Event"
+              label={t("Event")}
               value={event.id}
               onChange={setSelected}
               options={list.map((e) => ({ value: e.id, label: `${e.title} · ${eventDate(e.start_at, e.timezone)} ${eventTime(e.start_at, e.timezone)}` }))}
@@ -73,9 +75,9 @@ export default function CheckIn() {
       ) : (
         <Empty
           icon="people-outline"
-          title="No door assignment yet."
-          description="Events you can check guests in for appear here from the day they are published until they end. Ask the organizer to add your account's email to the team."
-          action="Browse events"
+          title={t("No door assignment yet.")}
+          description={t("Events you can check guests in for appear here from the day they are published until they end. Ask the organizer to add your account's email to the team.")}
+          action={t("Browse events")}
           onAction={() => router.replace("/")}
         />
       )}
@@ -84,6 +86,7 @@ export default function CheckIn() {
 }
 
 function Desk({ event }: { event: MyEvent }) {
+  const t = useT();
   const [version, setVersion] = useState(0);
   const [result, setResult] = useState<CheckInResult | null>(null);
   const [error, setError] = useState("");
@@ -154,20 +157,20 @@ function Desk({ event }: { event: MyEvent }) {
           <T style={{ fontSize: 28, fontWeight: "700" }}>
             {s.checked_in} / {s.registered}
           </T>
-          <T muted>checked in · {s.remaining} still to arrive</T>
+          <T muted>{t.plural(s.remaining, "checked in · {n} still to arrive", "checked in · {n} still to arrive")}</T>
           <Progress value={s.checked_in_percent} />
         </Card>
       )}
       <Row>
-        <Button icon={camera ? "close" : "camera-outline"} label={camera ? "Stop camera" : "Scan with camera"} onPress={() => setCamera((c) => !c)} />
+        <Button icon={camera ? "close" : "camera-outline"} label={camera ? t("Stop camera") : t("Scan with camera")} onPress={() => setCamera((c) => !c)} />
       </Row>
       {camera && <Scanner onCode={(value) => void scan(value)} />}
-      <Field label="Or type / paste a ticket code" value={code} onChangeText={setCode} autoCapitalize="none" autoCorrect={false} returnKeyType="go" onSubmitEditing={() => scan(code)} placeholder="The code from the ticket" />
-      <Button kind="secondary" label="Check ticket" disabled={!code.trim()} onPress={() => scan(code)} />
+      <Field label={t("Or type / paste a ticket code")} value={code} onChangeText={setCode} autoCapitalize="none" autoCorrect={false} returnKeyType="go" onSubmitEditing={() => scan(code)} placeholder={t("The code from the ticket")} />
+      <Button kind="secondary" label={t("Check ticket")} disabled={!code.trim()} onPress={() => scan(code)} />
       {result && (
         <View style={{ borderWidth: 1, borderColor: TONE[result.result] ?? color.bad, borderRadius: 14, padding: 14, gap: 4, backgroundColor: color.ink800 }}>
           <T bold style={{ color: TONE[result.result] ?? color.bad, fontSize: 18 }}>
-            {result.admitted ? "Welcome in" : result.message}
+            {result.admitted ? t("Welcome in") : result.message}
           </T>
           {result.ticket && (
             <T>
@@ -180,9 +183,9 @@ function Desk({ event }: { event: MyEvent }) {
       )}
       {error ? <Notice error>{error}</Notice> : null}
 
-      <H2>Find a guest</H2>
-      <Field label="Search guests" value={search} onChangeText={setSearch} placeholder="Name, email, seat or ticket reference" autoCapitalize="none" />
-      {q && matches.length === 0 && <T muted>No guest matches “{search}”.</T>}
+      <H2>{t("Find a guest")}</H2>
+      <Field label={t("Search guests")} value={search} onChangeText={setSearch} placeholder={t("Name, email, seat or ticket reference")} autoCapitalize="none" />
+      {q && matches.length === 0 && <T muted>{t("No guest matches “{search}”.", { search: search })}</T>}
       {matches.map((a) => (
         <Card key={a.ticket_id}>
           <Row wrap={false}>
@@ -195,42 +198,49 @@ function Desk({ event }: { event: MyEvent }) {
               </T>
             </View>
           </Row>
-          {a.status === "valid" && <Button small icon="ticket-outline" label="Check in" onPress={() => admit(a.ticket_id)} style={{ alignSelf: "flex-start" }} />}
+          {a.status === "valid" && <Button small icon="ticket-outline" label={t("Check in")} onPress={() => admit(a.ticket_id)} style={{ alignSelf: "flex-start" }} />}
           {a.status === "checked_in" &&
             (undoing === a.ticket_id ? (
               <>
-                <Field label="Why undo?" value={reason} onChangeText={setReason} maxLength={500} />
+                <Field label={t("Why undo?")} value={reason} onChangeText={setReason} maxLength={500} />
                 <Row>
-                  <Button small kind="danger" label="Undo check-in" disabled={reason.trim().length < 3} onPress={() => undo(a.ticket_id)} />
-                  <Button small kind="text" label="Keep" onPress={() => setUndoing(null)} />
+                  <Button small kind="danger" label={t("Undo check-in")} disabled={reason.trim().length < 3} onPress={() => undo(a.ticket_id)} />
+                  <Button small kind="text" label={t("Keep")} onPress={() => setUndoing(null)} />
                 </Row>
               </>
             ) : (
               <Row>
-                <Badge tone="live" label={`Checked in${a.checked_in_at ? ` ${eventTime(a.checked_in_at, event.timezone)}` : ""}`} />
-                <Button small kind="text" label="Undo" onPress={() => setUndoing(a.ticket_id)} />
+                <Badge tone="live" label={a.checked_in_at ? t("Checked in {time}", { time: eventTime(a.checked_in_at, event.timezone) }) : t("Checked in")} />
+                <Button small kind="text" label={t("Undo")} onPress={() => setUndoing(a.ticket_id)} />
               </Row>
             ))}
-          {(a.status === "cancelled" || a.status === "refunded") && <Badge tone="bad" label={`${a.status === "cancelled" ? "Cancelled" : "Refunded"} — do not admit`} />}
+          {(a.status === "cancelled" || a.status === "refunded") && <Badge tone="bad" label={a.status === "cancelled" ? t("Cancelled — do not admit") : t("Refunded — do not admit")} />}
         </Card>
       ))}
 
       <Row style={{ justifyContent: "space-between" }}>
-        <H2>Recent at this door</H2>
-        {canManageRole(event.my_role) && <Button small kind="text" label="Full guest list" onPress={() => router.push({ pathname: "/organizer/[id]", params: { id: event.id, tab: "Attendees" } })} />}
+        <H2>{t("Recent at this door")}</H2>
+        {canManageRole(event.my_role) && <Button small kind="text" label={t("Full guest list")} onPress={() => router.push({ pathname: "/organizer/[id]", params: { id: event.id, tab: "Attendees" } })} />}
       </Row>
       {history.data?.length ? (
         history.data.map((h) => (
           <View key={h.id} style={{ borderLeftWidth: 2, borderLeftColor: h.action === "undo" ? color.gold : color.ember, paddingLeft: 10 }}>
             <T small muted>{eventTime(h.created_at, event.timezone)}</T>
             <T>
-              <T bold>{h.attendee_name}</T> {h.action === "undo" ? `check-in undone${h.reason ? ` (${h.reason})` : ""}` : `checked in (${h.method === "scan" ? "scanned" : "from the list"})`}
-              {h.performed_by_name ? ` by ${h.performed_by_name}` : ""}
+              <T bold>{h.attendee_name}</T>{" "}
+              {h.action === "undo"
+                ? h.reason
+                  ? t("check-in undone ({reason})", { reason: h.reason })
+                  : t("check-in undone")
+                : h.method === "scan"
+                  ? t("checked in (scanned)")
+                  : t("checked in (from the list)")}
+              {h.performed_by_name ? ` · ${h.performed_by_name}` : ""}
             </T>
           </View>
         ))
       ) : (
-        <T muted>Nobody checked in yet.</T>
+        <T muted>{t("Nobody checked in yet.")}</T>
       )}
     </View>
   );
@@ -238,14 +248,15 @@ function Desk({ event }: { event: MyEvent }) {
 
 /** The camera, reading QR codes. The same code is read once per 3 seconds. */
 function Scanner({ onCode }: { onCode: (code: string) => void }) {
+  const t = useT();
   const [permission, requestPermission] = useCameraPermissions();
   const last = useRef({ code: "", at: 0 });
-  if (!permission) return <Loading label="Starting the camera…" />;
+  if (!permission) return <Loading label={t("Starting the camera…")} />;
   if (!permission.granted)
     return (
       <Card>
-        <T>{permission.canAskAgain ? "BiletFlow needs the camera to scan tickets." : "Camera access is off. Turn it on for BiletFlow in your phone's settings, or type the code instead."}</T>
-        {permission.canAskAgain && <Button label="Allow camera" onPress={requestPermission} />}
+        <T>{permission.canAskAgain ? t("BiletFlow needs the camera to scan tickets.") : t("Camera access is off. Turn it on for BiletFlow in your phone's settings, or type the code instead.")}</T>
+        {permission.canAskAgain && <Button label={t("Allow camera")} onPress={requestPermission} />}
       </Card>
     );
   return (
@@ -262,9 +273,7 @@ function Scanner({ onCode }: { onCode: (code: string) => void }) {
         }}
       />
       {Platform.OS === "web" && (
-        <T small muted style={{ position: "absolute", bottom: 8, left: 8 }}>
-          Scanning in the browser depends on its camera support.
-        </T>
+        <T small muted style={{ position: "absolute", bottom: 8, left: 8 }}>{t("Scanning in the browser depends on its camera support.")}</T>
       )}
     </View>
   );

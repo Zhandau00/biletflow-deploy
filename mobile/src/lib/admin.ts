@@ -1,5 +1,7 @@
 /** Platform administration data as the BiletFlow backend returns it. */
 
+import { tk } from "./i18n";
+
 export type AdminUser = {
   id: string;
   email: string;
@@ -152,13 +154,13 @@ export type PlatformSettings = {
 
 /** The CSV reports the backend can build. */
 export const EXPORTS: [string, string][] = [
-  ["users", "Users"],
-  ["events", "Events"],
-  ["orders", "Orders"],
-  ["payments", "Payments"],
-  ["refunds", "Refunds"],
-  ["activations", "Paid-sales activations"],
-  ["disputes", "Disputes"],
-  ["promotions", "Promo-code activity"],
-  ["support", "Support cases"],
+  ["users", tk("Users")],
+  ["events", tk("Events")],
+  ["orders", tk("Orders")],
+  ["payments", tk("Payments")],
+  ["refunds", tk("Refunds")],
+  ["activations", tk("Paid-sales activations")],
+  ["disputes", tk("Disputes")],
+  ["promotions", tk("Promo-code activity")],
+  ["support", tk("Support cases")],
 ];

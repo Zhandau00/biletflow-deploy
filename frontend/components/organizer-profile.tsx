@@ -9,14 +9,17 @@ import { failure } from "./organizer-pages";
 import { refreshSession } from "./session-provider";
 import { useLoad } from "./use-load";
 import { LoadingPage, Notice, PageIntro } from "./primitives";
+import { useT } from "@/components/language";
 
+import { tk } from "@/lib/i18n";
 const VERIFICATION: Record<string, string> = {
-  pending: "Submitted — the BiletFlow team is checking it",
-  verified: "Verified",
-  rejected: "Rejected — check the details and submit again",
+  pending: tk("Submitted — the BiletFlow team is checking it"),
+  verified: tk("Verified"),
+  rejected: tk("Rejected — check the details and submit again"),
 };
 
 export function OrganizerProfileView() {
+  const t = useT();
   const [version, setVersion] = useState(0);
   const [notice, setNotice] = useState<{ text: string; error: boolean } | null>(null);
   const [busy, setBusy] = useState("");
@@ -54,7 +57,7 @@ export function OrganizerProfileView() {
 
   return (
     <>
-      <PageIntro eyebrow="How guests see you" title="Organizer profile." description="Your public details, identity check and payout account. The last two are needed before paid tickets can go on sale." />
+      <PageIntro eyebrow={t("How guests see you")} title={t("Organizer profile.")} description={t("Your public details, identity check and payout account. The last two are needed before paid tickets can go on sale.")} />
       {notice && <Notice error={notice.error}>{notice.text}</Notice>}
       <form
         className="stack-form"
@@ -74,34 +77,28 @@ export function OrganizerProfileView() {
                   description: text(d, "description"),
                 },
               }),
-            "Profile saved.",
+            t("Profile saved."),
           );
         }}
       >
-        <h2>Public details</h2>
-        <label>
-          Organizer name
-          <input name="display_name" defaultValue={profile.display_name} required minLength={2} maxLength={255} />
+        <h2>{t("Public details")}</h2>
+        <label>{t("Organizer name")}<input name="display_name" defaultValue={profile.display_name} required minLength={2} maxLength={255} />
         </label>
         <div className="form-two">
-          <label>
-            Contact email <span className="optional">Optional</span>
+          <label>{t("Contact email")}{" "}<span className="optional">{t("Optional")}</span>
             <input name="contact_email" type="email" defaultValue={profile.contact_email ?? ""} maxLength={255} />
           </label>
-          <label>
-            Contact phone <span className="optional">Optional</span>
+          <label>{t("Contact phone")}{" "}<span className="optional">{t("Optional")}</span>
             <input name="contact_phone" type="tel" defaultValue={profile.contact_phone ?? ""} maxLength={30} placeholder="+7 700 000 0000" />
           </label>
         </div>
-        <label>
-          Website <span className="optional">Optional</span>
+        <label>{t("Website")}{" "}<span className="optional">{t("Optional")}</span>
           <input name="website_url" type="url" defaultValue={profile.website_url ?? ""} maxLength={500} placeholder="https://" />
         </label>
-        <label>
-          About you <span className="optional">Optional</span>
+        <label>{t("About you")}{" "}<span className="optional">{t("Optional")}</span>
           <textarea name="description" rows={3} defaultValue={profile.description ?? ""} maxLength={2000} />
         </label>
-        <button className="btn btn-primary" disabled={busy === "details"}>{busy === "details" ? "Saving…" : "Save details"}</button>
+        <button className="btn btn-primary" disabled={busy === "details"}>{busy === "details" ? t("Saving…") : t("Save details")}</button>
       </form>
 
       <form
@@ -113,36 +110,31 @@ export function OrganizerProfileView() {
           void run(
             "identity",
             () => api.request("/organizers/me/verification", { body: { legal_name: text(d, "legal_name"), tax_id: text(d, "tax_id") } }),
-            "Submitted. The BiletFlow team will confirm your identity.",
+            t("Submitted. The BiletFlow team will confirm your identity."),
             form,
           );
         }}
       >
-        <h2>Identity check</h2>
-        <p className="muted">
-          Status:{" "}
+        <h2>{t("Identity check")}</h2>
+        <p className="muted">{t("Status:")}{" "}
           <strong>
             {/* Every profile starts as "pending"; it only means something once details are sent */}
             {profile.verification_status && (profile.verification_submitted_at || profile.verification_status !== "pending")
-              ? VERIFICATION[profile.verification_status]
-              : "Not submitted"}
+              ? t(VERIFICATION[profile.verification_status] ?? profile.verification_status)
+              : t("Not submitted")}
           </strong>
           {profile.legal_name && ` · ${profile.legal_name}`}
-          {profile.tax_id_masked && ` · IIN/BIN ${profile.tax_id_masked}`}
+          {profile.tax_id_masked && t(" · IIN/BIN {tax_id_masked}", { tax_id_masked: profile.tax_id_masked })}
         </p>
         {profile.verification_status !== "verified" && (
           <>
             <div className="form-two">
-              <label>
-                Legal name (person or company)
-                <input name="legal_name" required minLength={2} maxLength={255} defaultValue={profile.legal_name ?? ""} />
+              <label>{t("Legal name (person or company)")}<input name="legal_name" required minLength={2} maxLength={255} defaultValue={profile.legal_name ?? ""} />
               </label>
-              <label>
-                IIN or BIN
-                <input name="tax_id" required inputMode="numeric" pattern="\d{12}" maxLength={12} placeholder="12 digits" />
+              <label>{t("IIN or BIN")}<input name="tax_id" required inputMode="numeric" pattern="\d{12}" maxLength={12} placeholder={t("12 digits")} />
               </label>
             </div>
-            <button className="btn btn-secondary" disabled={busy === "identity"}>{busy === "identity" ? "Sending…" : "Submit for verification"}</button>
+            <button className="btn btn-secondary" disabled={busy === "identity"}>{busy === "identity" ? t("Sending…") : t("Submit for verification")}</button>
           </>
         )}
       </form>
@@ -160,36 +152,30 @@ export function OrganizerProfileView() {
                 method: "PUT",
                 body: { holder_name: text(d, "holder_name"), bank_name: text(d, "bank_name"), iban: text(d, "iban") },
               }),
-            "Payout account saved.",
+            t("Payout account saved."),
             form,
           );
         }}
       >
-        <h2>Payout account</h2>
+        <h2>{t("Payout account")}</h2>
         {payout ? (
           <p className="muted">
-            {payout.holder_name} · {payout.bank_name} · {payout.iban_masked} {payout.is_verified ? "· verified" : ""}
-            {payout.is_simulated && " · payouts are simulated"}
+            {payout.holder_name} · {payout.bank_name} · {payout.iban_masked} {payout.is_verified ? t("· verified") : ""}
+            {payout.is_simulated && t(" · payouts are simulated")}
           </p>
         ) : (
-          <p className="muted">No account yet. Ticket revenue would be paid here.</p>
+          <p className="muted">{t("No account yet. Ticket revenue would be paid here.")}</p>
         )}
         <div className="form-two">
-          <label>
-            Account holder
-            <input name="holder_name" required minLength={2} maxLength={255} defaultValue={payout?.holder_name ?? profile.legal_name ?? ""} />
+          <label>{t("Account holder")}<input name="holder_name" required minLength={2} maxLength={255} defaultValue={payout?.holder_name ?? profile.legal_name ?? ""} />
           </label>
-          <label>
-            Bank
-            <input name="bank_name" required minLength={2} maxLength={255} defaultValue={payout?.bank_name ?? ""} placeholder="Halyk Bank" />
+          <label>{t("Bank")}<input name="bank_name" required minLength={2} maxLength={255} defaultValue={payout?.bank_name ?? ""} placeholder={t("Halyk Bank")} />
           </label>
         </div>
-        <label>
-          IBAN
-          <input name="iban" required maxLength={34} placeholder="KZ…" autoComplete="off" />
-          <span className="field-hint">Kazakhstan IBAN, 20 characters starting with KZ</span>
+        <label>{t("IBAN")}<input name="iban" required maxLength={34} placeholder="KZ…" autoComplete="off" />
+          <span className="field-hint">{t("Kazakhstan IBAN, 20 characters starting with KZ")}</span>
         </label>
-        <button className="btn btn-secondary" disabled={busy === "payout"}>{busy === "payout" ? "Saving…" : payout ? "Replace account" : "Save account"}</button>
+        <button className="btn btn-secondary" disabled={busy === "payout"}>{busy === "payout" ? t("Saving…") : payout ? t("Replace account") : t("Save account")}</button>
       </form>
     </>
   );

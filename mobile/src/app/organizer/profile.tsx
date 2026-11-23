@@ -4,7 +4,9 @@ import { BecomeOrganizer, OrganizerProfileView } from "@/components/organizer/pa
 import { useSession } from "@/components/session";
 import { Empty, Loading, Screen } from "@/components/ui";
 
+import { useT } from "@/lib/i18n";
 export default function OrganizerProfile() {
+  const t = useT();
   const { ready, user, organizer } = useSession();
   if (!ready)
     return (
@@ -15,7 +17,7 @@ export default function OrganizerProfile() {
   if (!user)
     return (
       <Screen>
-        <Empty icon="person-outline" title="Sign in to edit your organizer profile." action="Sign in" onAction={() => signInFirst("/organizer/profile")} />
+        <Empty icon="person-outline" title={t("Sign in to edit your organizer profile.")} action={t("Sign in")} onAction={() => signInFirst("/organizer/profile")} />
       </Screen>
     );
   return <Screen>{organizer ? <OrganizerProfileView /> : <BecomeOrganizer />}</Screen>;

@@ -37,7 +37,7 @@ export default function Work() {
             <Card key={view} onPress={() => router.push(view === "overview" ? "/admin" : `/admin/${view}`)}>
               <Row wrap={false}>
                 <Icon name={icon} tint={color.ember} />
-                <T bold style={{ flex: 1 }}>{label}</T>
+                <T bold style={{ flex: 1 }}>{t(label)}</T>
                 <Icon name="chevron-forward" tint={color.muted} />
               </Row>
             </Card>

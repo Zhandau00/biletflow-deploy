@@ -29,29 +29,31 @@ import { caseRef, CATEGORY_LABELS, type CaseSummary } from "@/lib/support";
 import { useSession } from "./session-provider";
 import { useLoad } from "./use-load";
 import { EmptyState, Icon, LoadingPage, Notice, PageIntro } from "./primitives";
+import { useT } from "@/components/language";
+import { formatDate, getLang, tk, tr } from "@/lib/i18n";
 import "./admin.css";
 
 type TableRow = { id: string; cells: ReactNode[] };
 
 const VIEWS: [string, string][] = [
-  ["overview", "Overview"],
-  ["users", "Users"],
-  ["organizers", "Organizer checks"],
-  ["events", "Events"],
-  ["orders", "Orders"],
-  ["payments", "Payments"],
-  ["reviews", "Event reports"],
-  ["activations", "Paid-sales activations"],
-  ["support", "Platform support"],
-  ["promotions", "Promo codes"],
-  ["settings", "Settings"],
-  ["audit", "Activity history"],
+  ["overview", tk("Overview")],
+  ["users", tk("Users")],
+  ["organizers", tk("Organizer checks")],
+  ["events", tk("Events")],
+  ["orders", tk("Orders")],
+  ["payments", tk("Payments")],
+  ["reviews", tk("Event reports")],
+  ["activations", tk("Paid-sales activations")],
+  ["support", tk("Platform support")],
+  ["promotions", tk("Promo codes")],
+  ["settings", tk("Settings")],
+  ["audit", tk("Activity history")],
 ];
 
 const kzt = (value: number) => `₸${value.toLocaleString("en-US")}`;
 const dateTime = (value: string) =>
-  new Date(value).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Almaty" });
-const failure = (error: unknown) => (error instanceof Error && error.message ? error.message : "This change could not be saved.");
+  formatDate(getLang(), new Date(value), { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Almaty" });
+const failure = (error: unknown) => (error instanceof Error && error.message ? error.message : tr("This change could not be saved."));
 
 function Status({ value }: { value: string }) {
   const v = value.toLowerCase();
@@ -72,7 +74,8 @@ function RecordName({ title, reference }: { title: ReactNode; reference?: string
   );
 }
 
-function DataTable({ caption, headings, rows, empty = "No matching records." }: { caption: string; headings: string[]; rows: TableRow[]; empty?: string }) {
+function DataTable({ caption, headings, rows, empty }: { caption: string; headings: string[]; rows: TableRow[]; empty?: string }) {
+  const t = useT();
   return rows.length ? (
     <div className="admin-table-scroll" role="region" aria-label={caption} tabIndex={0}>
       <table className="admin-table">
@@ -96,13 +99,14 @@ function DataTable({ caption, headings, rows, empty = "No matching records." }: 
       </table>
     </div>
   ) : (
-    <p className="admin-empty">{empty}</p>
+    <p className="admin-empty">{empty ?? t("No matching records.")}</p>
   );
 }
 
 /** A list from the backend, with a loading state and errors in place. */
 function Listed<T>({ data, children }: { data: { data?: T; status: string; error?: Error }; children: (value: T) => ReactNode }) {
-  if (data.status === "error" && data.data === undefined) return <Notice error>{data.error?.message ?? "Could not load this list."}</Notice>;
+  const t = useT();
+  if (data.status === "error" && data.data === undefined) return <Notice error>{data.error?.message ?? t("Could not load this list.")}</Notice>;
   if (data.data === undefined) return <LoadingPage />;
   return <>{children(data.data)}</>;
 }
@@ -132,6 +136,7 @@ function ReasonAction({
   minLength?: number;
   onConfirm: (reason: string) => Promise<void>;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   if (!open)
@@ -151,14 +156,15 @@ function ReasonAction({
         setOpen(false);
       }}
     >
-      <input name="reason" required minLength={minLength} maxLength={500} placeholder="Reason (the owner is told)" aria-label={`Reason to ${label.toLowerCase()}`} autoFocus />
+      <input name="reason" required minLength={minLength} maxLength={500} placeholder={t("Reason (the owner is told)")} aria-label={t("Reason: {action}", { action: label })} autoFocus />
       <button className="btn btn-small btn-primary" disabled={busy}>{confirm}</button>
-      <button type="button" className="btn btn-small btn-secondary" onClick={() => setOpen(false)}>Cancel</button>
+      <button type="button" className="btn btn-small btn-secondary" onClick={() => setOpen(false)}>{t("Cancel")}</button>
     </form>
   );
 }
 
 export function AdminPage({ view }: { view?: string }) {
+  const t = useT();
   const { user, isAdmin, ready } = useSession();
   if (!ready) return <LoadingPage />;
   if (!user || !isAdmin)
@@ -166,10 +172,10 @@ export function AdminPage({ view }: { view?: string }) {
       <main className="workspace">
         <EmptyState
           icon="users"
-          title="Platform administration."
-          description={user ? "This area is for the BiletFlow platform team." : "Sign in with a platform administrator account."}
+          title={t("Platform administration.")}
+          description={user ? t("This area is for the BiletFlow platform team.") : t("Sign in with a platform administrator account.")}
           href={user ? "/" : "/sign-in?next=/admin"}
-          label={user ? "Back to BiletFlow" : "Sign in"}
+          label={user ? t("Back to BiletFlow") : t("Sign in")}
         />
       </main>
     );
@@ -178,6 +184,7 @@ export function AdminPage({ view }: { view?: string }) {
 }
 
 function AdminWorkspace({ view, me }: { view: string; me: string }) {
+  const t = useT();
   const [q, setQ] = useState("");
   const [draft, setDraft] = useState("");
   const [filter, setFilter] = useState("");
@@ -200,24 +207,23 @@ function AdminWorkspace({ view, me }: { view: string; me: string }) {
   }
 
   const searchable = ["overview", "users", "organizers", "events", "orders", "payments"].includes(view);
-  const placeholder = view === "overview" ? "Search users, events, orders and payments (name, email or reference)…" : "Search names, emails or references…";
+  const placeholder = view === "overview" ? t("Search users, events, orders and payments (name, email or reference)…") : t("Search names, emails or references…");
 
   return (
     <main className="workspace admin-workspace">
       <PageIntro
-        eyebrow="BiletFlow / platform operations"
-        title="A clear view of the whole house."
-        description="Review activity, resolve exceptions and keep the platform running. Every action here is recorded in the activity history."
+        eyebrow={t("BiletFlow / platform operations")}
+        title={t("A clear view of the whole house.")}
+        description={t("Review activity, resolve exceptions and keep the platform running. Every action here is recorded in the activity history.")}
         action={
-          <Link className="btn btn-secondary" href="/support">
-            Support inbox <Icon name="arrow" size={16} />
+          <Link className="btn btn-secondary" href="/support">{t("Support inbox")}{" "}<Icon name="arrow" size={16} />
           </Link>
         }
       />
-      <nav className="admin-tabs" aria-label="Administration sections">
+      <nav className="admin-tabs" aria-label={t("Administration sections")}>
         {VIEWS.map(([key, label]) => (
           <Link key={key} href={`/admin?view=${key}`} aria-current={view === key ? "page" : undefined}>
-            {label}
+            {t(label)}
           </Link>
         ))}
       </nav>
@@ -232,10 +238,10 @@ function AdminWorkspace({ view, me }: { view: string; me: string }) {
         >
           <label className="admin-search">
             <Icon name="search" size={18} />
-            <span className="admin-visually-hidden">Search</span>
+            <span className="admin-visually-hidden">{t("Search")}</span>
             <input type="search" value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={placeholder} minLength={view === "overview" ? 2 : undefined} />
           </label>
-          <button className="btn btn-small btn-secondary">Search</button>
+          <button className="btn btn-small btn-secondary">{t("Search")}</button>
           {q && (
             <button
               type="button"
@@ -244,9 +250,7 @@ function AdminWorkspace({ view, me }: { view: string; me: string }) {
                 setDraft("");
                 setQ("");
               }}
-            >
-              Clear
-            </button>
+            >{t("Clear")}</button>
           )}
         </form>
       )}
@@ -266,21 +270,19 @@ function AdminWorkspace({ view, me }: { view: string; me: string }) {
 
       <section className="admin-export" aria-labelledby="admin-export-title">
         <div>
-          <h2 id="admin-export-title">Take a working copy.</h2>
-          <p>Download a CSV report built from live records. Spreadsheet formulas in cells are neutralised.</p>
+          <h2 id="admin-export-title">{t("Take a working copy.")}</h2>
+          <p>{t("Download a CSV report built from live records. Spreadsheet formulas in cells are neutralised.")}</p>
         </div>
         <label>
-          <span className="admin-visually-hidden">Report</span>
+          <span className="admin-visually-hidden">{t("Report")}</span>
           <select value={exportKind} onChange={(e) => setExportKind(e.target.value)}>
             {EXPORTS.map(([key, label]) => (
-              <option key={key} value={key}>{label}</option>
+              <option key={key} value={key}>{t(label)}</option>
             ))}
           </select>
         </label>
         <a className="btn btn-secondary" href={`/api/backend/admin/exports/${exportKind}.csv`} download={`biletflow-${exportKind}.csv`}>
-          <Icon name="download" size={17} />
-          Export CSV
-        </a>
+          <Icon name="download" size={17} />{t("Export CSV")}</a>
       </section>
     </main>
   );
@@ -314,7 +316,7 @@ function userRows(list: AdminUser[], act: Act, me: string): TableRow[] {
     cells: [
       <RecordName key="n" title={u.full_name} reference={u.id.slice(0, 8).toUpperCase()} />,
       u.email,
-      u.is_platform_admin ? "Platform admin" : u.is_email_verified ? "Verified email" : "Email not verified",
+      u.is_platform_admin ? tr("Platform admin") : u.is_email_verified ? tr("Verified email") : tr("Email not verified"),
       <span key="s">
         <Status value={u.is_suspended ? "suspended" : "active"} />
         {u.suspension_reason && <small className="admin-section-note"> {u.suspension_reason}</small>}
@@ -322,11 +324,9 @@ function userRows(list: AdminUser[], act: Act, me: string): TableRow[] {
       u.id === me || u.is_platform_admin ? (
         "—"
       ) : u.is_suspended ? (
-        <button key="a" className="btn btn-small btn-secondary" onClick={() => act(() => api.request(`/admin/users/${u.id}/restore`, { method: "POST" }), `${u.full_name} can sign in again.`)}>
-          Restore
-        </button>
+        <button key="a" className="btn btn-small btn-secondary" onClick={() => act(() => api.request(`/admin/users/${u.id}/restore`, { method: "POST" }), tr("{full_name} can sign in again.", { full_name: u.full_name }))}>{tr("Restore")}</button>
       ) : (
-        <ReasonAction key="a" label="Suspend" confirm="Confirm suspend" onConfirm={(reason) => act(() => api.request(`/admin/users/${u.id}/suspend`, { body: { reason } }), `${u.full_name} is suspended and signed out everywhere.`)} />
+        <ReasonAction key="a" label={tr("Suspend")} confirm={tr("Confirm suspend")} onConfirm={(reason) => act(() => api.request(`/admin/users/${u.id}/suspend`, { body: { reason } }), tr("{full_name} is suspended and signed out everywhere.", { full_name: u.full_name }))} />
       ),
     ],
   }));
@@ -342,31 +342,28 @@ function eventRows(list: AdminEvent[], act: Act): TableRow[] {
         <Status value={e.is_suspended ? "suspended" : e.status} /> {e.lifecycle !== "upcoming" && e.lifecycle !== e.status && <Status value={e.lifecycle} />}
       </span>,
       e.paid_sales_open ? (
-        <span key="p" className="admin-row-actions">
-          Open
-          <ReasonAction label="Suspend paid sales" confirm="Suspend" minLength={5} onConfirm={(reason) => act(() => api.request(`/admin/events/${e.id}/paid-sales/suspend`, { body: { reason } }), `Paid sales stopped for ${e.title}. Resume them under Paid-sales activations.`)} />
+        <span key="p" className="admin-row-actions">{tr("Open")}<ReasonAction label={tr("Suspend paid sales")} confirm={tr("Suspend")} minLength={5} onConfirm={(reason) => act(() => api.request(`/admin/events/${e.id}/paid-sales/suspend`, { body: { reason } }), tr("Paid sales stopped for {title}. Resume them under Paid-sales activations.", { title: e.title }))} />
         </span>
       ) : (
-        "Closed"
+        tr("Closed")
       ),
       e.is_suspended ? (
-        <button key="a" className="btn btn-small btn-secondary" onClick={() => act(() => api.request(`/admin/events/${e.id}/restore`, { method: "POST" }), `${e.title} is back on sale.`)}>
-          Restore
-        </button>
+        <button key="a" className="btn btn-small btn-secondary" onClick={() => act(() => api.request(`/admin/events/${e.id}/restore`, { method: "POST" }), tr("{title} is back on sale.", { title: e.title }))}>{tr("Restore")}</button>
       ) : (
-        <ReasonAction key="a" label="Suspend" confirm="Confirm suspend" onConfirm={(reason) => act(() => api.request(`/admin/events/${e.id}/suspend`, { body: { reason } }), `${e.title} is hidden and closed to new orders. The organizer was told.`)} />
+        <ReasonAction key="a" label={tr("Suspend")} confirm={tr("Confirm suspend")} onConfirm={(reason) => act(() => api.request(`/admin/events/${e.id}/suspend`, { body: { reason } }), tr("{title} is hidden and closed to new orders. The organizer was told.", { title: e.title }))} />
       ),
     ],
   }));
 }
 
 function OrdersTable({ data }: { data: { data?: AdminOrder[]; status: string; error?: Error } }) {
+  const t = useT();
   return (
     <Listed data={data}>
       {(list) => (
         <DataTable
-          caption="Orders"
-          headings={["Order", "Buyer", "Event", "Total", "Status"]}
+          caption={t("Orders")}
+          headings={[t("Order"), t("Buyer"), t("Event"), t("Total"), t("Status")]}
           rows={list.map((o) => ({
             id: o.id,
             cells: [
@@ -394,7 +391,7 @@ function paymentRows(list: AdminPayment[], act?: Act): TableRow[] {
       <Status key="s" value={p.status} />,
       p.failure_reason ?? "—",
       act && p.status === "succeeded" ? (
-        <ReasonAction key="d" label="Record dispute" confirm="Open dispute" onConfirm={(reason) => act(() => api.request(`/admin/payments/${p.id}/disputes`, { body: { reason } }), "Dispute recorded.")} />
+        <ReasonAction key="d" label={tr("Record dispute")} confirm={tr("Open dispute")} onConfirm={(reason) => act(() => api.request(`/admin/payments/${p.id}/disputes`, { body: { reason } }), tr("Dispute recorded."))} />
       ) : (
         "—"
       ),
@@ -403,6 +400,7 @@ function paymentRows(list: AdminPayment[], act?: Act): TableRow[] {
 }
 
 function Overview({ q, k, get, act, me }: { q: string; k: string; get: Getter; act: Act; me: string }) {
+  const t = useT();
   const counts = useLoadList(`counts:${k}`, async (signal) => {
     const [reports, support, failed, suspended, organizers] = await Promise.all([
       get<EventReport[]>("/admin/reports", { status: "pending" })(signal),
@@ -431,20 +429,20 @@ function Overview({ q, k, get, act, me }: { q: string; k: string; get: Getter; a
           r && (
             <div className="admin-global-results">
               <section>
-                <h2>Users <span>{r.users.length}</span></h2>
-                <DataTable caption="Users found" headings={["User", "Email", "Account", "Status", "Action"]} rows={userRows(r.users, act, me)} />
+                <h2>{t("Users")}{" "}<span>{r.users.length}</span></h2>
+                <DataTable caption={t("Users found")} headings={[t("User"), t("Email"), t("Account"), t("Status"), t("Action")]} rows={userRows(r.users, act, me)} />
               </section>
               <section>
-                <h2>Events <span>{r.events.length}</span></h2>
-                <DataTable caption="Events found" headings={["Event", "Organizer", "Status", "Paid sales", "Action"]} rows={eventRows(r.events, act)} />
+                <h2>{t("Events")}{" "}<span>{r.events.length}</span></h2>
+                <DataTable caption={t("Events found")} headings={[t("Event"), t("Organizer"), t("Status"), t("Paid sales"), t("Action")]} rows={eventRows(r.events, act)} />
               </section>
               <section>
-                <h2>Orders <span>{r.orders.length}</span></h2>
+                <h2>{t("Orders")}{" "}<span>{r.orders.length}</span></h2>
                 <OrdersTable data={{ data: r.orders, status: "ready" }} />
               </section>
               <section>
-                <h2>Payments <span>{r.payments.length}</span></h2>
-                <DataTable caption="Payments found" headings={["Payment", "Buyer / order", "Event", "Amount", "Status", "Failure reason", "Dispute"]} rows={paymentRows(r.payments, act)} />
+                <h2>{t("Payments")}{" "}<span>{r.payments.length}</span></h2>
+                <DataTable caption={t("Payments found")} headings={[t("Payment"), t("Buyer / order"), t("Event"), t("Amount"), t("Status"), t("Failure reason"), t("Dispute")]} rows={paymentRows(r.payments, act)} />
               </section>
             </div>
           )
@@ -455,28 +453,28 @@ function Overview({ q, k, get, act, me }: { q: string; k: string; get: Getter; a
     <>
       {counts.status === "error" && <Notice error>{counts.error.message}</Notice>}
       <div className="admin-stats">
-        <Stat label="Event reports" value={c?.reports} href="/admin?view=reviews" detail="Awaiting review" />
-        <Stat label="Platform support" value={c?.support} href="/admin?view=support" detail="Organizer and escalated cases not resolved" />
-        <Stat label="Failed payments" value={c?.failed} href="/admin?view=payments" detail="Simulated payment failures" />
-        <Stat label="Identity checks" value={c?.organizers} href="/admin?view=organizers" detail="Organizers waiting for a decision" />
-        <Stat label="Suspended users" value={c?.suspended} href="/admin?view=users" detail="Sign-in blocked" />
+        <Stat label={t("Event reports")} value={c?.reports} href="/admin?view=reviews" detail={t("Awaiting review")} />
+        <Stat label={t("Platform support")} value={c?.support} href="/admin?view=support" detail={t("Organizer and escalated cases not resolved")} />
+        <Stat label={t("Failed payments")} value={c?.failed} href="/admin?view=payments" detail={t("Simulated payment failures")} />
+        <Stat label={t("Identity checks")} value={c?.organizers} href="/admin?view=organizers" detail={t("Organizers waiting for a decision")} />
+        <Stat label={t("Suspended users")} value={c?.suspended} href="/admin?view=users" detail={t("Sign-in blocked")} />
       </div>
       <div className="admin-overview-grid">
         <section className="admin-panel">
-          <h2>Attention, where it matters.</h2>
-          <p className="muted">Work through the queues without losing sight of the people behind each record.</p>
+          <h2>{t("Attention, where it matters.")}</h2>
+          <p className="muted">{t("Work through the queues without losing sight of the people behind each record.")}</p>
           <Link className="admin-queue-link" href="/admin?view=reviews">
-            <span>Reported events<small>Dismiss reports, or act and suspend the event.</small></span>
+            <span>{t("Reported events")}<small>{t("Dismiss reports, or act and suspend the event.")}</small></span>
             <strong>{c?.reports ?? "–"}</strong>
             <Icon name="arrow" size={17} />
           </Link>
           <Link className="admin-queue-link" href="/admin?view=support">
-            <span>Platform support<small>Organizer requests and escalated attendee cases.</small></span>
+            <span>{t("Platform support")}<small>{t("Organizer requests and escalated attendee cases.")}</small></span>
             <strong>{c?.support ?? "–"}</strong>
             <Icon name="arrow" size={17} />
           </Link>
           <Link className="admin-queue-link" href="/admin?view=organizers">
-            <span>Organizer identity checks<small>Confirm or reject submitted legal details.</small></span>
+            <span>{t("Organizer identity checks")}<small>{t("Confirm or reject submitted legal details.")}</small></span>
             <strong>{c?.organizers ?? "–"}</strong>
             <Icon name="arrow" size={17} />
           </Link>
@@ -488,46 +486,48 @@ function Overview({ q, k, get, act, me }: { q: string; k: string; get: Getter; a
 }
 
 function SettingsSummary({ k }: { k: string }) {
+  const t = useT();
   const s = useLoadList(`settings-summary:${k}`, (signal) => api.request<PlatformSettings>("/admin/settings", { signal }));
   return (
     <section className="admin-panel">
-      <h2>Platform at a glance.</h2>
+      <h2>{t("Platform at a glance.")}</h2>
       <dl className="admin-summary-list">
         <div>
-          <dt>New bookings</dt>
+          <dt>{t("New bookings")}</dt>
           <dd>{s.data ? <Status value={s.data.bookings_enabled ? "active" : "paused"} /> : "–"}</dd>
         </div>
         <div>
-          <dt>Activation fee</dt>
+          <dt>{t("Activation fee")}</dt>
           <dd>{s.data ? kzt(s.data.activation_fee_kzt) : "–"}</dd>
         </div>
         <div>
-          <dt>Support email</dt>
+          <dt>{t("Support email")}</dt>
           <dd>{s.data?.support_email ?? "–"}</dd>
         </div>
       </dl>
-      <Link className="text-link" href="/admin?view=settings">
-        Manage platform settings <Icon name="arrow" size={15} />
+      <Link className="text-link" href="/admin?view=settings">{t("Manage platform settings")}{" "}<Icon name="arrow" size={15} />
       </Link>
     </section>
   );
 }
 
 function Users({ k, q, get, act, me }: { k: string; q: string; get: Getter; act: Act; me: string }) {
+  const t = useT();
   const data = useLoadList(k, get<AdminUser[]>("/admin/users", { q: q || undefined }));
   return (
     <section>
       <div className="admin-section-heading">
-        <h2>Users</h2>
-        <span>{data.data?.length ?? ""} shown</span>
+        <h2>{t("Users")}</h2>
+        <span>{t("Shown: {n}", { n: data.data?.length ?? "" })}</span>
       </div>
-      <p className="admin-section-note">Suspending blocks sign-in, signs the person out everywhere and takes their events out of public view.</p>
-      <Listed data={data}>{(list) => <DataTable caption="Users" headings={["User", "Email", "Account", "Status", "Action"]} rows={userRows(list, act, me)} />}</Listed>
+      <p className="admin-section-note">{t("Suspending blocks sign-in, signs the person out everywhere and takes their events out of public view.")}</p>
+      <Listed data={data}>{(list) => <DataTable caption={t("Users")} headings={[t("User"), t("Email"), t("Account"), t("Status"), t("Action")]} rows={userRows(list, act, me)} />}</Listed>
     </section>
   );
 }
 
 function Organizers({ k, q, get, act, ...f }: { k: string; q: string; get: Getter; act: Act } & FilterProps) {
+  const t = useT();
   const data = useLoadList(k, get<AdminOrganizer[]>("/admin/organizers", { q: q || undefined, verification_status: f.filter || undefined }));
   const decide = (o: AdminOrganizer, status: "verified" | "rejected") =>
     act(
@@ -537,33 +537,33 @@ function Organizers({ k, q, get, act, ...f }: { k: string; q: string; get: Gette
   return (
     <section>
       <div className="admin-section-heading">
-        <h2>Organizer identity checks</h2>
-        <FilterSelect label="Status" options={[["", "All"], ["pending", "Pending"], ["verified", "Verified"], ["rejected", "Rejected"]]} {...f} />
+        <h2>{t("Organizer identity checks")}</h2>
+        <FilterSelect label={t("Status")} options={[["", t("All")], ["pending", t("Pending")], ["verified", t("Verified")], ["rejected", t("Rejected")]]} {...f} />
       </div>
-      <p className="admin-section-note">A valid IIN/BIN verifies an organizer automatically (simulated). Reject when the details look wrong; their next submission then waits for you.</p>
+      <p className="admin-section-note">{t("A valid IIN/BIN verifies an organizer automatically (simulated). Reject when the details look wrong; their next submission then waits for you.")}</p>
       <Listed data={data}>
         {(list) => (
           <DataTable
-            caption="Organizers"
-            headings={["Organizer", "Legal details", "Submitted", "Status", "Decision"]}
+            caption={t("Organizers")}
+            headings={[t("Organizer"), t("Legal details"), t("Submitted"), t("Status"), t("Decision")]}
             rows={list.map((o) => ({
               id: o.id,
               cells: [
                 <RecordName key="n" title={o.display_name} reference={o.email} />,
-                o.legal_name ? <RecordName key="l" title={o.legal_name} reference={o.tax_id_masked ? `IIN/BIN ${o.tax_id_masked}` : undefined} /> : "Not submitted",
+                o.legal_name ? <RecordName key="l" title={o.legal_name} reference={o.tax_id_masked ? `IIN/BIN ${o.tax_id_masked}` : undefined} /> : t("Not submitted"),
                 o.verification_submitted_at ? dateTime(o.verification_submitted_at) : "—",
                 <Status key="s" value={o.verification_status === "pending" && !o.verification_submitted_at ? "not submitted" : o.verification_status} />,
                 o.legal_name ? (
                   <div key="d" className="admin-row-actions">
                     {o.verification_status !== "verified" && (
-                      <button className="btn btn-small btn-primary" onClick={() => decide(o, "verified")}>Verify</button>
+                      <button className="btn btn-small btn-primary" onClick={() => decide(o, "verified")}>{t("Verify")}</button>
                     )}
                     {o.verification_status !== "rejected" && (
-                      <button className="btn btn-small btn-secondary" onClick={() => decide(o, "rejected")}>Reject</button>
+                      <button className="btn btn-small btn-secondary" onClick={() => decide(o, "rejected")}>{t("Reject")}</button>
                     )}
                   </div>
                 ) : (
-                  "Waiting for details"
+                  t("Waiting for details")
                 ),
               ],
             }))}
@@ -575,12 +575,13 @@ function Organizers({ k, q, get, act, ...f }: { k: string; q: string; get: Gette
 }
 
 function Orders({ k, q, get }: { k: string; q: string; get: Getter }) {
+  const t = useT();
   const data = useLoadList(k, get<AdminOrder[]>("/admin/orders", { q: q || undefined }));
   return (
     <section>
       <div className="admin-section-heading">
-        <h2>Orders</h2>
-        <span>{data.data?.length ?? ""} shown</span>
+        <h2>{t("Orders")}</h2>
+        <span>{t("Shown: {n}", { n: data.data?.length ?? "" })}</span>
       </div>
       <OrdersTable data={data} />
     </section>
@@ -588,20 +589,22 @@ function Orders({ k, q, get }: { k: string; q: string; get: Getter }) {
 }
 
 function Events({ k, q, get, act }: { k: string; q: string; get: Getter; act: Act }) {
+  const t = useT();
   const data = useLoadList(k, get<AdminEvent[]>("/admin/events", { q: q || undefined }));
   return (
     <section>
       <div className="admin-section-heading">
-        <h2>Events</h2>
-        <span>{data.data?.length ?? ""} shown</span>
+        <h2>{t("Events")}</h2>
+        <span>{t("Shown: {n}", { n: data.data?.length ?? "" })}</span>
       </div>
-      <p className="admin-section-note">A suspended event is hidden from attendees and takes no new orders. Issued tickets stay valid.</p>
-      <Listed data={data}>{(list) => <DataTable caption="Events" headings={["Event", "Organizer", "Status", "Paid sales", "Action"]} rows={eventRows(list, act)} />}</Listed>
+      <p className="admin-section-note">{t("A suspended event is hidden from attendees and takes no new orders. Issued tickets stay valid.")}</p>
+      <Listed data={data}>{(list) => <DataTable caption={t("Events")} headings={[t("Event"), t("Organizer"), t("Status"), t("Paid sales"), t("Action")]} rows={eventRows(list, act)} />}</Listed>
     </section>
   );
 }
 
 function Payments({ k, q, get, act, ...f }: { k: string; q: string; get: Getter; act: Act } & FilterProps) {
+  const t = useT();
   const payments = useLoadList(k, get<AdminPayment[]>("/admin/payments", { q: q || undefined, status: f.filter || undefined }));
   const refunds = useLoadList(`refunds:${k}`, get<AdminRefund[]>("/admin/refunds"));
   const disputes = useLoadList(`disputes:${k}`, get<Dispute[]>("/admin/disputes"));
@@ -609,20 +612,20 @@ function Payments({ k, q, get, act, ...f }: { k: string; q: string; get: Getter;
     <>
       <section>
         <div className="admin-section-heading">
-          <h2>Payments</h2>
-          <FilterSelect label="Status" options={[["", "All payments"], ["succeeded", "Succeeded"], ["failed", "Failed"]]} {...f} />
+          <h2>{t("Payments")}</h2>
+          <FilterSelect label={t("Status")} options={[["", t("All payments")], ["succeeded", t("Succeeded")], ["failed", t("Failed")]]} {...f} />
         </div>
         <Listed data={payments}>
-          {(list) => <DataTable caption="Payments" headings={["Payment", "Buyer / order", "Event", "Amount", "Status", "Failure reason", "Dispute"]} rows={paymentRows(list, act)} />}
+          {(list) => <DataTable caption={t("Payments")} headings={[t("Payment"), t("Buyer / order"), t("Event"), t("Amount"), t("Status"), t("Failure reason"), t("Dispute")]} rows={paymentRows(list, act)} />}
         </Listed>
       </section>
       <section className="admin-section">
-        <h2>Refunds</h2>
+        <h2>{t("Refunds")}</h2>
         <Listed data={refunds}>
           {(list) => (
             <DataTable
-              caption="Refunds"
-              headings={["Refund", "Buyer / order", "Event", "Amount", "Reason", "By"]}
+              caption={t("Refunds")}
+              headings={[t("Refund"), t("Buyer / order"), t("Event"), t("Amount"), t("Reason"), t("By")]}
               rows={list.map((r) => ({
                 id: r.id,
                 cells: [
@@ -639,24 +642,24 @@ function Payments({ k, q, get, act, ...f }: { k: string; q: string; get: Getter;
         </Listed>
       </section>
       <section className="admin-section">
-        <h2>Disputes</h2>
+        <h2>{t("Disputes")}</h2>
         <Listed data={disputes}>
           {(list) => (
             <DataTable
-              caption="Disputes"
-              headings={["Dispute", "Order / payment", "Amount", "Reason", "Status", "Outcome"]}
+              caption={t("Disputes")}
+              headings={[t("Dispute"), t("Order / payment"), t("Amount"), t("Reason"), t("Status"), t("Outcome")]}
               rows={list.map((d) => ({
                 id: d.id,
                 cells: [
                   <RecordName key="r" title={d.id.slice(0, 8).toUpperCase()} reference={dateTime(d.created_at)} />,
-                  <RecordName key="o" title={`Order ${d.order_id.slice(0, 8).toUpperCase()}`} reference={`Payment ${d.payment_id.slice(0, 8).toUpperCase()}`} />,
+                  <RecordName key="o" title={t("Order {reference}", { reference: d.order_id.slice(0, 8).toUpperCase() })} reference={t("Payment {reference}", { reference: d.payment_id.slice(0, 8).toUpperCase() })} />,
                   kzt(d.amount_kzt),
                   d.reason,
                   <Status key="s" value={d.status} />,
                   d.status === "open" ? (
                     <div key="a" className="admin-row-actions">
-                      <button className="btn btn-small btn-secondary" onClick={() => act(() => api.request(`/admin/disputes/${d.id}`, { method: "PATCH", body: { status: "won" } }), "Dispute marked as won.")}>Won</button>
-                      <button className="btn btn-small btn-secondary" onClick={() => act(() => api.request(`/admin/disputes/${d.id}`, { method: "PATCH", body: { status: "lost" } }), "Dispute marked as lost.")}>Lost</button>
+                      <button className="btn btn-small btn-secondary" onClick={() => act(() => api.request(`/admin/disputes/${d.id}`, { method: "PATCH", body: { status: "won" } }), t("Dispute marked as won."))}>{t("Won")}</button>
+                      <button className="btn btn-small btn-secondary" onClick={() => act(() => api.request(`/admin/disputes/${d.id}`, { method: "PATCH", body: { status: "lost" } }), t("Dispute marked as lost."))}>{t("Lost")}</button>
                     </div>
                   ) : (
                     d.resolution_note ?? (d.resolved_at ? dateTime(d.resolved_at) : "—")
@@ -672,23 +675,24 @@ function Payments({ k, q, get, act, ...f }: { k: string; q: string; get: Getter;
 }
 
 function Reports({ k, get, act, ...f }: { k: string; get: Getter; act: Act } & FilterProps) {
+  const t = useT();
   const data = useLoadList(k, get<EventReport[]>("/admin/reports", { status: f.filter || undefined }));
   const review = (r: EventReport, decision: "dismissed" | "actioned", suspend: boolean, note?: string) =>
     act(
       () => api.request(`/admin/reports/${r.id}/review`, { body: { decision, suspend_event: suspend, note: note || null } }),
-      suspend ? "Report actioned and the event suspended." : decision === "dismissed" ? "Report dismissed." : "Report marked as handled.",
+      suspend ? t("Report actioned and the event suspended.") : decision === "dismissed" ? t("Report dismissed.") : t("Report marked as handled."),
     );
   return (
     <section>
       <div className="admin-section-heading">
-        <h2>Reported events</h2>
-        <FilterSelect label="Status" options={[["", "All"], ["pending", "Pending"], ["dismissed", "Dismissed"], ["actioned", "Actioned"]]} {...f} />
+        <h2>{t("Reported events")}</h2>
+        <FilterSelect label={t("Status")} options={[["", t("All")], ["pending", t("Pending")], ["dismissed", t("Dismissed")], ["actioned", t("Actioned")]]} {...f} />
       </div>
       <Listed data={data}>
         {(list) => (
           <DataTable
-            caption="Event reports"
-            headings={["Event", "Reason", "Status", "Review"]}
+            caption={t("Event reports")}
+            headings={[t("Event"), t("Reason"), t("Status"), t("Review")]}
             rows={list.map((r) => ({
               id: r.id,
               cells: [
@@ -697,11 +701,11 @@ function Reports({ k, get, act, ...f }: { k: string; get: Getter; act: Act } & F
                 <Status key="s" value={r.status} />,
                 r.status === "pending" ? (
                   <div key="a" className="admin-row-actions">
-                    <button className="btn btn-small btn-secondary" onClick={() => review(r, "dismissed", false)}>Dismiss</button>
-                    <ReasonAction label="Suspend event" confirm="Suspend" onConfirm={(note) => review(r, "actioned", true, note)} />
+                    <button className="btn btn-small btn-secondary" onClick={() => review(r, "dismissed", false)}>{t("Dismiss")}</button>
+                    <ReasonAction label={t("Suspend event")} confirm={t("Suspend")} onConfirm={(note) => review(r, "actioned", true, note)} />
                   </div>
                 ) : (
-                  <RecordName key="d" title={r.review_note ?? "Reviewed"} reference={r.reviewed_at ? dateTime(r.reviewed_at) : undefined} />
+                  <RecordName key="d" title={r.review_note ?? t("Reviewed")} reference={r.reviewed_at ? dateTime(r.reviewed_at) : undefined} />
                 ),
               ],
             }))}
@@ -713,36 +717,35 @@ function Reports({ k, get, act, ...f }: { k: string; get: Getter; act: Act } & F
 }
 
 function Activations({ k, get, act, ...f }: { k: string; get: Getter; act: Act } & FilterProps) {
+  const t = useT();
   const data = useLoadList(k, get<ActivationRecord[]>("/admin/activations", { status: f.filter || undefined, limit: undefined }));
   return (
     <section>
       <div className="admin-section-heading">
-        <h2>Paid-sales activations</h2>
-        <FilterSelect label="Status" options={[["", "All"], ["pending", "Pending"], ["active", "Active"], ["suspended", "Suspended"]]} {...f} />
+        <h2>{t("Paid-sales activations")}</h2>
+        <FilterSelect label={t("Status")} options={[["", t("All")], ["pending", t("Pending")], ["active", t("Active")], ["suspended", t("Suspended")]]} {...f} />
       </div>
-      <p className="admin-section-note">Fees are simulated; no money moves. Suspending paid sales leaves free tickets and sold tickets alone.</p>
+      <p className="admin-section-note">{t("Fees are simulated; no money moves. Suspending paid sales leaves free tickets and sold tickets alone.")}</p>
       <Listed data={data}>
         {(list) => (
           <DataTable
-            caption="Activation records"
-            headings={["Event", "Organizer", "Fee", "Steps", "Status", "Action"]}
+            caption={t("Activation records")}
+            headings={[t("Event"), t("Organizer"), t("Fee"), t("Steps"), t("Status"), t("Action")]}
             rows={list.map((a) => ({
               id: a.id,
               cells: [
                 <RecordName key="e" title={a.event_title} reference={dateTime(a.created_at)} />,
                 a.organizer_name,
-                <RecordName key="f" title={kzt(a.fee_kzt)} reference={a.fee_paid_at ? `Paid ${dateTime(a.fee_paid_at)}` : "Not paid"} />,
-                a.terms_accepted_at ? `Terms ${a.terms_version ?? ""} accepted` : "Terms not accepted",
+                <RecordName key="f" title={kzt(a.fee_kzt)} reference={a.fee_paid_at ? t("Paid {when}", { when: dateTime(a.fee_paid_at) }) : t("Not paid")} />,
+                a.terms_accepted_at ? t("Terms {version} accepted", { version: a.terms_version ?? "" }) : t("Terms not accepted"),
                 <span key="s">
                   <Status value={a.status} />
                   {a.suspension_reason && <small className="admin-section-note"> {a.suspension_reason}</small>}
                 </span>,
                 a.status === "active" ? (
-                  <ReasonAction key="a" label="Suspend paid sales" confirm="Suspend" minLength={5} onConfirm={(reason) => act(() => api.request(`/admin/events/${a.event_id}/paid-sales/suspend`, { body: { reason } }), "Paid sales suspended. The organizer was emailed.")} />
+                  <ReasonAction key="a" label={t("Suspend paid sales")} confirm={t("Suspend")} minLength={5} onConfirm={(reason) => act(() => api.request(`/admin/events/${a.event_id}/paid-sales/suspend`, { body: { reason } }), t("Paid sales suspended. The organizer was emailed."))} />
                 ) : a.status === "suspended" ? (
-                  <button key="a" className="btn btn-small btn-secondary" onClick={() => act(() => api.request(`/admin/events/${a.event_id}/paid-sales/resume`, { method: "POST" }), "Paid sales resumed.")}>
-                    Resume
-                  </button>
+                  <button key="a" className="btn btn-small btn-secondary" onClick={() => act(() => api.request(`/admin/events/${a.event_id}/paid-sales/resume`, { method: "POST" }), t("Paid sales resumed."))}>{t("Resume")}</button>
                 ) : (
                   "—"
                 ),
@@ -756,28 +759,29 @@ function Activations({ k, get, act, ...f }: { k: string; get: Getter; act: Act }
 }
 
 function SupportQueue({ k, ...f }: { k: string } & FilterProps) {
+  const t = useT();
   const data = useLoadList(k, (signal) => api.request<CaseSummary[]>("/support/cases", { signal, query: { scope: "handling", status: f.filter || undefined } }));
   return (
     <section>
       <div className="admin-section-heading">
-        <h2>Organizer and escalated support</h2>
-        <FilterSelect label="Status" options={[["", "All"], ["open", "Open"], ["in_progress", "In Progress"], ["waiting_for_customer", "Waiting for Customer"], ["resolved", "Resolved"]]} {...f} />
+        <h2>{t("Organizer and escalated support")}</h2>
+        <FilterSelect label={t("Status")} options={[["", t("All")], ["open", t("Open")], ["in_progress", t("In Progress")], ["waiting_for_customer", t("Waiting for Customer")], ["resolved", t("Resolved")]]} {...f} />
       </div>
       <Listed data={data}>
         {(list) => (
           <DataTable
-            caption="Platform support queue"
-            headings={["Case", "Requester", "Category", "Status", "Assigned to"]}
+            caption={t("Platform support queue")}
+            headings={[t("Case"), t("Requester"), t("Category"), t("Status"), t("Assigned to")]}
             rows={list.map((c) => ({
               id: c.id,
               cells: [
                 <Link key="c" className="admin-case-link" href={`/support/${c.id}`}>
-                  <RecordName title={c.subject} reference={`${caseRef(c.id)} · ${c.audience === "organizer" ? "Organizer" : `Escalated · ${c.event_title ?? "event"}`}`} />
+                  <RecordName title={c.subject} reference={`${caseRef(c.id)} · ${c.audience === "organizer" ? t("Organizer") : (c.event_title ? t("Escalated · {event}", { event: c.event_title }) : t("Escalated"))}`} />
                 </Link>,
                 c.requester_name,
                 CATEGORY_LABELS[c.category] ?? c.category,
                 <Status key="s" value={c.status_label} />,
-                c.assignee_name ?? "Unassigned",
+                c.assignee_name ?? t("Unassigned"),
               ],
             }))}
           />
@@ -788,18 +792,19 @@ function SupportQueue({ k, ...f }: { k: string } & FilterProps) {
 }
 
 function Promotions({ k, get }: { k: string; get: Getter }) {
+  const t = useT();
   const data = useLoadList(k, get<PromoActivity[]>("/admin/promo-activity"));
   return (
     <section>
       <div className="admin-section-heading">
-        <h2>Promo-code activity</h2>
-        <span>{data.data?.length ?? ""} redemptions</span>
+        <h2>{t("Promo-code activity")}</h2>
+        <span>{t("Redemptions: {n}", { n: data.data?.length ?? "" })}</span>
       </div>
       <Listed data={data}>
         {(list) => (
           <DataTable
-            caption="Promo-code redemptions"
-            headings={["Code", "Buyer", "Event", "Order", "Discount", "Used"]}
+            caption={t("Promo-code redemptions")}
+            headings={[t("Code"), t("Buyer"), t("Event"), t("Order"), t("Discount"), t("Used")]}
             rows={list.map((p) => ({
               id: p.redemption_id,
               cells: [
@@ -819,11 +824,12 @@ function Promotions({ k, get }: { k: string; get: Getter }) {
 }
 
 function Settings({ k, act }: { k: string; act: Act }) {
+  const t = useT();
   const data = useLoadList(k, (signal) => api.request<PlatformSettings>("/admin/settings", { signal }));
   const [enabled, setEnabled] = useState<boolean | null>(null);
   return (
     <section className="admin-panel">
-      <h2>Platform settings</h2>
+      <h2>{t("Platform settings")}</h2>
       <Listed data={data}>
         {(s) => {
           const bookings = enabled ?? s.bookings_enabled;
@@ -843,28 +849,23 @@ function Settings({ k, act }: { k: string; act: Act }) {
                   ...(bookings !== s.bookings_enabled ? { bookings_enabled: bookings } : {}),
                 };
                 if (!Object.keys(body).length) return;
-                void act(() => api.request("/admin/settings", { method: "PATCH", body }), "Platform settings saved.");
+                void act(() => api.request("/admin/settings", { method: "PATCH", body }), t("Platform settings saved."));
               }}
             >
-              <label>
-                Paid-sales activation fee (KZT)
-                <input name="fee" type="number" min={0} max={10000000} step={1} required defaultValue={s.activation_fee_kzt} />
-                <span className="field-hint">Applies to activation records created from now on. Existing records keep their fee.</span>
+              <label>{t("Paid-sales activation fee (KZT)")}<input name="fee" type="number" min={0} max={10000000} step={1} required defaultValue={s.activation_fee_kzt} />
+                <span className="field-hint">{t("Applies to activation records created from now on. Existing records keep their fee.")}</span>
               </label>
-              <label>
-                Platform support email
-                <input name="email" type="email" maxLength={255} required defaultValue={s.support_email} />
+              <label>{t("Platform support email")}<input name="email" type="email" maxLength={255} required defaultValue={s.support_email} />
               </label>
               <label className="admin-setting-toggle">
                 <input type="checkbox" checked={bookings} onChange={(e) => setEnabled(e.target.checked)} />
                 <span>
-                  <strong>Accept new bookings</strong>
-                  <small>When paused, nobody can start a checkout. Existing orders, tickets and support stay available.</small>
+                  <strong>{t("Accept new bookings")}</strong>
+                  <small>{t("When paused, nobody can start a checkout. Existing orders, tickets and support stay available.")}</small>
                 </span>
               </label>
-              {s.updated_at && <p className="field-hint">Last changed {dateTime(s.updated_at)}</p>}
-              <button className="btn btn-primary">
-                Save platform settings <Icon name="check" size={16} />
+              {s.updated_at && <p className="field-hint">{t("Last changed {dateTime}", { dateTime: dateTime(s.updated_at) })}</p>}
+              <button className="btn btn-primary">{t("Save platform settings")}{" "}<Icon name="check" size={16} />
               </button>
             </form>
           );
@@ -875,26 +876,27 @@ function Settings({ k, act }: { k: string; act: Act }) {
 }
 
 function Audit({ k, get, ...f }: { k: string; get: Getter } & FilterProps) {
+  const t = useT();
   const data = useLoadList(k, get<AuditRow[]>("/admin/audit", { action: f.filter || undefined, limit: 200 }));
   return (
     <section>
       <div className="admin-section-heading">
-        <h2>Activity history</h2>
+        <h2>{t("Activity history")}</h2>
         <FilterSelect
-          label="Area"
-          options={[["", "Everything"], ["platform.", "Platform admin"], ["organizer.", "Organizers"], ["event.", "Events"], ["order.", "Orders"], ["payment.", "Payments"], ["refund.", "Refunds"], ["activation.", "Activations"], ["promo.", "Promotions"], ["support.", "Support"], ["check_in.", "Check-in"]]}
+          label={t("Area")}
+          options={[["", t("Everything")], ["platform.", t("Platform admin")], ["organizer.", t("Organizers")], ["event.", t("Events")], ["order.", t("Orders")], ["payment.", t("Payments")], ["refund.", t("Refunds")], ["activation.", t("Activations")], ["promo.", t("Promotions")], ["support.", t("Support")], ["check_in.", t("Check-in")]]}
           {...f}
         />
       </div>
-      <p className="admin-section-note">Read-only. Entries cannot be edited or deleted.</p>
+      <p className="admin-section-note">{t("Read-only. Entries cannot be edited or deleted.")}</p>
       <Listed data={data}>
         {(list) => (
           <DataTable
-            caption="Activity history"
-            headings={["When", "Who", "What", "Record"]}
+            caption={t("Activity history")}
+            headings={[t("When"), t("Who"), t("What"), t("Record")]}
             rows={list.map((a) => ({
               id: a.id,
-              cells: [dateTime(a.created_at), a.actor_name ?? "System", a.description, <Status key="t" value={a.entity_type} />],
+              cells: [dateTime(a.created_at), a.actor_name ?? t("System"), a.description, <Status key="t" value={a.entity_type} />],
             }))}
           />
         )}

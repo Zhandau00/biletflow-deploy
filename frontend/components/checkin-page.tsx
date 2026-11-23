@@ -22,6 +22,8 @@ import { failure, OrganizerShell } from "./organizer-pages";
 import { useSession } from "./session-provider";
 import { useLoad } from "./use-load";
 import { EmptyState, Icon, LoadingPage, Notice, PageIntro } from "./primitives";
+import { useT } from "@/components/language";
+import { tr } from "@/lib/i18n";
 
 const RESULT_TONE: Record<string, string> = {
   valid: "scan-ok",
@@ -35,6 +37,7 @@ const RESULT_TONE: Record<string, string> = {
 type Detector = { detect: (source: HTMLVideoElement) => Promise<{ rawValue: string }[]> };
 
 export function CheckInPage() {
+  const t = useT();
   const { ready, user, organizer, staffEvents } = useSession();
   const events = useLoad(`checkin-events:${user?.id ?? ""}`, async (signal) => {
     if (!user) return [] as MyEvent[];
@@ -54,22 +57,20 @@ export function CheckInPage() {
   if (!user)
     return (
       <main className="workspace narrow-workspace">
-        <EmptyState icon="users" title="The door list lives here." description="Sign in with the account your organizer added to the event team." href="/sign-in?next=/check-in" label="Sign in" />
+        <EmptyState icon="users" title={t("The door list lives here.")} description={t("Sign in with the account your organizer added to the event team.")} href="/sign-in?next=/check-in" label={t("Sign in")} />
       </main>
     );
   const list = events.data ?? [];
   const event = list.find((e) => e.id === selected) ?? list[0];
   const body = (
     <>
-      <PageIntro eyebrow="First impressions count" title="Welcome them in." description="Scan a ticket or find a guest by name." />
+      <PageIntro eyebrow={t("First impressions count")} title={t("Welcome them in.")} description={t("Scan a ticket or find a guest by name.")} />
       {events.status === "error" && <Notice error>{events.error.message}</Notice>}
       {!events.data ? (
         <LoadingPage />
       ) : event ? (
         <>
-          <label className="checkin-event-select">
-            Event
-            <select value={event.id} onChange={(e) => setSelected(e.target.value)}>
+          <label className="checkin-event-select">{t("Event")}<select value={event.id} onChange={(e) => setSelected(e.target.value)}>
               {list.map((e) => (
                 <option key={e.id} value={e.id}>
                   {e.title} · {eventDate(e.start_at, e.timezone)} {eventTime(e.start_at, e.timezone)}
@@ -82,10 +83,10 @@ export function CheckInPage() {
       ) : (
         <EmptyState
           icon="users"
-          title="No door assignment yet."
-          description="Events you can check guests in for appear here from the day they are published until they end. Ask the organizer to add your account's email to the team."
+          title={t("No door assignment yet.")}
+          description={t("Events you can check guests in for appear here from the day they are published until they end. Ask the organizer to add your account's email to the team.")}
           href="/events"
-          label="Browse events"
+          label={t("Browse events")}
         />
       )}
     </>
@@ -95,6 +96,7 @@ export function CheckInPage() {
 }
 
 function Desk({ event }: { event: MyEvent }) {
+  const t = useT();
   const [version, setVersion] = useState(0);
   const [result, setResult] = useState<CheckInResult | null>(null);
   const [error, setError] = useState("");
@@ -175,7 +177,7 @@ function Desk({ event }: { event: MyEvent }) {
           <strong>
             {s.checked_in} / {s.registered}
           </strong>
-          <span>checked in · {s.remaining} still to arrive</span>
+          <span>{t.plural(s.remaining, "checked in · {n} still to arrive", "checked in · {n} still to arrive")}</span>
           <div className="progress-track">
             <span style={{ width: `${s.checked_in_percent}%` }} />
           </div>
@@ -188,22 +190,20 @@ function Desk({ event }: { event: MyEvent }) {
           void scan(input.current?.value ?? "");
         }}
       >
-        <label>
-          Scan or paste a ticket code
-          <input ref={input} autoFocus autoComplete="off" placeholder="Point the scanner here, or paste the code" aria-describedby="scan-hint" />
+        <label>{t("Scan or paste a ticket code")}<input ref={input} autoFocus autoComplete="off" placeholder={t("Point the scanner here, or paste the code")} aria-describedby="scan-hint" />
         </label>
         <div className="button-row">
-          <button className="btn btn-primary">Check ticket</button>
+          <button className="btn btn-primary">{t("Check ticket")}</button>
           <button type="button" className="btn btn-secondary" onClick={() => setCamera((c) => !c)}>
-            {camera ? "Stop camera" : "Use camera"}
+            {camera ? t("Stop camera") : t("Use camera")}
           </button>
         </div>
-        <p id="scan-hint" className="field-hint">USB and Bluetooth scanners type the code and press Enter for you.</p>
+        <p id="scan-hint" className="field-hint">{t("USB and Bluetooth scanners type the code and press Enter for you.")}</p>
       </form>
       {camera && <CameraScanner onCode={(code) => void scan(code)} onClose={() => setCamera(false)} />}
       {result && (
         <div className={`scan-result ${RESULT_TONE[result.result] ?? "scan-bad"}`} role="status">
-          <strong>{result.admitted ? "Welcome in" : result.message}</strong>
+          <strong>{result.admitted ? t("Welcome in") : result.message}</strong>
           {result.ticket && (
             <p>
               {result.ticket.attendee_name} · {result.ticket.ticket_type_name}
@@ -216,15 +216,15 @@ function Desk({ event }: { event: MyEvent }) {
       {error && <Notice error>{error}</Notice>}
 
       <div className="section-heading">
-        <h2>Find a guest</h2>
+        <h2>{t("Find a guest")}</h2>
       </div>
       <label className="search-input">
         <Icon name="search" size={17} />
-        <input aria-label="Search guests" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Name, email, seat or ticket reference" />
+        <input aria-label={t("Search guests")} value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("Name, email, seat or ticket reference")} />
       </label>
       {q && (
         <div className="attendee-list">
-          {matches.length === 0 && <p className="muted">No guest matches “{search}”.</p>}
+          {matches.length === 0 && <p className="muted">{t("No guest matches “{search}”.", { search: search })}</p>}
           {matches.map((a) => (
             <article className="attendee-row" key={a.ticket_id}>
               <div className="attendee-person">
@@ -240,25 +240,24 @@ function Desk({ event }: { event: MyEvent }) {
               <div className="attendee-tickets">
                 {a.status === "valid" && (
                   <button className="btn btn-small btn-secondary" onClick={() => admit(a.ticket_id)}>
-                    <Icon name="ticket" size={14} /> Check in
-                  </button>
+                    <Icon name="ticket" size={14} />{" "}{t("Check in")}</button>
                 )}
                 {a.status === "checked_in" &&
                   (undoing === a.ticket_id ? (
                     <form className="cancel-order" onSubmit={(e) => undo(e, a.ticket_id)}>
-                      <input name="reason" required minLength={3} maxLength={500} placeholder="Why undo?" aria-label="Reason for undoing" />
-                      <button className="text-button danger">Undo check-in</button>
-                      <button type="button" className="text-button" onClick={() => setUndoing(null)}>Keep</button>
+                      <input name="reason" required minLength={3} maxLength={500} placeholder={t("Why undo?")} aria-label={t("Reason for undoing")} />
+                      <button className="text-button danger">{t("Undo check-in")}</button>
+                      <button type="button" className="text-button" onClick={() => setUndoing(null)}>{t("Keep")}</button>
                     </form>
                   ) : (
                     <>
                       <span className="status-badge status-live">
-                        Checked in {a.checked_in_at && eventTime(a.checked_in_at, event.timezone)}
+                        {t("Checked in {time}", { time: a.checked_in_at && eventTime(a.checked_in_at, event.timezone) })}
                       </span>
-                      <button className="text-button muted" onClick={() => setUndoing(a.ticket_id)}>Undo</button>
+                      <button className="text-button muted" onClick={() => setUndoing(a.ticket_id)}>{t("Undo")}</button>
                     </>
                   ))}
-                {(a.status === "cancelled" || a.status === "refunded") && <span className="status-badge">{a.status === "cancelled" ? "Cancelled" : "Refunded"} — do not admit</span>}
+                {(a.status === "cancelled" || a.status === "refunded") && <span className="status-badge">{a.status === "cancelled" ? t("Cancelled — do not admit") : t("Refunded — do not admit")}</span>}
               </div>
             </article>
           ))}
@@ -266,9 +265,9 @@ function Desk({ event }: { event: MyEvent }) {
       )}
 
       <div className="section-heading recent-orders-heading">
-        <h2>Recent at this door</h2>
+        <h2>{t("Recent at this door")}</h2>
         {canManageRole(event.my_role) && (
-          <Link className="text-link" href={`/organizer/events/${event.id}?tab=Attendees`}>Full guest list</Link>
+          <Link className="text-link" href={`/organizer/events/${event.id}?tab=Attendees`}>{t("Full guest list")}</Link>
         )}
       </div>
       {history.data?.length ? (
@@ -277,14 +276,21 @@ function Desk({ event }: { event: MyEvent }) {
             <li key={h.id}>
               <time>{eventTime(h.created_at, event.timezone)}</time>
               <p>
-                <strong>{h.attendee_name}</strong> {h.action === "undo" ? `check-in undone${h.reason ? ` (${h.reason})` : ""}` : `checked in (${h.method === "scan" ? "scanned" : "from the list"})`}
-                {h.performed_by_name && ` by ${h.performed_by_name}`}
+                <strong>{h.attendee_name}</strong>{" "}
+                {h.action === "undo"
+                  ? h.reason
+                    ? t("check-in undone ({reason})", { reason: h.reason })
+                    : t("check-in undone")
+                  : h.method === "scan"
+                    ? t("checked in (scanned)")
+                    : t("checked in (from the list)")}
+                {h.performed_by_name && ` · ${h.performed_by_name}`}
               </p>
             </li>
           ))}
         </ol>
       ) : (
-        <p className="muted">Nobody checked in yet.</p>
+        <p className="muted">{t("Nobody checked in yet.")}</p>
       )}
     </section>
   );
@@ -292,6 +298,7 @@ function Desk({ event }: { event: MyEvent }) {
 
 /** Reads QR codes with the camera where the browser supports BarcodeDetector. */
 function CameraScanner({ onCode, onClose }: { onCode: (code: string) => void; onClose: () => void }) {
+  const t = useT();
   const video = useRef<HTMLVideoElement>(null);
   const [problem, setProblem] = useState("");
   const last = useRef({ code: "", at: 0 });
@@ -325,17 +332,17 @@ function CameraScanner({ onCode, onClose }: { onCode: (code: string) => void; on
           }
         }, 400);
       })
-      .catch(() => setProblem("Camera access was not allowed."));
+      .catch(() => setProblem(tr("Camera access was not allowed.")));
     return () => {
       clearInterval(timer);
-      stream?.getTracks().forEach((t) => t.stop());
+      stream?.getTracks().forEach((track) => track.stop());
     };
   }, [Ctor]);
-  const message = Ctor ? problem : "This browser cannot read QR codes from the camera. Use a scanner or type the code instead.";
+  const message = Ctor ? problem : t("This browser cannot read QR codes from the camera. Use a scanner or type the code instead.");
   return (
     <div className="camera-scanner">
-      {message ? <Notice error>{message}</Notice> : <video ref={video} muted playsInline aria-label="Camera view for scanning tickets" />}
-      <button className="text-button" onClick={onClose}>Close camera</button>
+      {message ? <Notice error>{message}</Notice> : <video ref={video} muted playsInline aria-label={t("Camera view for scanning tickets")} />}
+      <button className="text-button" onClick={onClose}>{t("Close camera")}</button>
     </div>
   );
 }

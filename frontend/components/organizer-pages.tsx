@@ -43,63 +43,45 @@ import {
 } from "./organizer-tabs";
 import { OrganizerProfileView } from "./organizer-profile";
 import { EmptyState, Icon, LoadingPage, Notice, PageIntro, Poster } from "./primitives";
+import { useT } from "@/components/language";
 
-export const failure = (error: unknown, fallback = "That did not work. Please try again.") =>
+import { tk, tr } from "@/lib/i18n";
+export const failure = (error: unknown, fallback = tr("That did not work. Please try again.")) =>
   error instanceof Error && error.message ? error.message : fallback;
 
 export const amount = (value: number) => `₸${value.toLocaleString("en-US")}`;
 
 export function OrganizerShell({ children, active = "overview" }: { children: ReactNode; active?: string }) {
+  const t = useT();
   const { organizer } = useSession();
   return (
     <div className="organizer-shell">
       <aside className="organizer-sidebar">
-        <p className="eyebrow">Behind the scenes</p>
+        <p className="eyebrow">{t("Behind the scenes")}</p>
         <p className="workspace-name">
-          {organizer?.display_name ?? "Your box office"}
-          <span>Organizer workspace</span>
+          {organizer?.display_name ?? t("Your box office")}
+          <span>{t("Organizer workspace")}</span>
         </p>
-        <nav aria-label="Organizer navigation">
+        <nav aria-label={t("Organizer navigation")}>
           <Link className={active === "overview" ? "active" : ""} href="/organizer">
-            <Icon name="grid" size={18} />
-            Overview
-          </Link>
+            <Icon name="grid" size={18} />{t("Overview")}</Link>
           <Link className={active === "events" ? "active" : ""} href="/organizer?view=events">
-            <Icon name="calendar" size={18} />
-            My events
-          </Link>
+            <Icon name="calendar" size={18} />{t("My events")}</Link>
           <Link className={active === "check-in" ? "active" : ""} href="/check-in">
-            <Icon name="users" size={18} />
-            Check-in desk
-          </Link>
+            <Icon name="users" size={18} />{t("Check-in desk")}</Link>
           <Link className={active === "profile" ? "active" : ""} href="/organizer?view=profile">
-            <Icon name="check" size={18} />
-            Organizer profile
-          </Link>
+            <Icon name="check" size={18} />{t("Organizer profile")}</Link>
           <Link href="/support">
-            <Icon name="mail" size={18} />
-            Support inbox
-          </Link>
+            <Icon name="mail" size={18} />{t("Support inbox")}</Link>
         </nav>
         <Link className="btn btn-primary btn-full" href="/organizer/events/new">
-          <Icon name="plus" size={16} />
-          Create event
-        </Link>
+          <Icon name="plus" size={16} />{t("Create event")}</Link>
         <div className="sidebar-note">
           <Icon name="ticket" size={23} />
-          <p>
-            You set the stage.
-            <br />
-            We&apos;ll keep the list.
-          </p>
-          <span>
-            Payments are simulated
-            <br />
-            in this version of BiletFlow.
-          </span>
+          <p>{t("You set the stage.")}<br />{t("We'll keep the list.")}</p>
+          <span>{t("Payments are simulated")}<br />{t("in this version of BiletFlow.")}</span>
         </div>
-        <Link className="text-link muted" href="/events">
-          Back to the audience <Icon name="external" size={13} />
+        <Link className="text-link muted" href="/events">{t("Back to the audience")}{" "}<Icon name="external" size={13} />
         </Link>
       </aside>
       <main className="organizer-main">{children}</main>
@@ -121,16 +103,16 @@ export function Stat({ label, value, note, icon }: { label: string; value: strin
 }
 
 const LIFECYCLES = [
-  { value: "all", label: "All events" },
-  { value: "draft", label: "Drafts" },
-  { value: "upcoming", label: "Upcoming" },
-  { value: "active", label: "Happening now" },
-  { value: "completed", label: "Completed" },
-  { value: "cancelled", label: "Cancelled" },
+  { value: "all", label: tk("All events") },
+  { value: "draft", label: tk("Drafts") },
+  { value: "upcoming", label: tk("Upcoming") },
+  { value: "active", label: tk("Happening now") },
+  { value: "completed", label: tk("Completed") },
+  { value: "cancelled", label: tk("Cancelled") },
 ];
 
 export const lifecycleLabel = (value: string) =>
-  ({ draft: "Draft", upcoming: "Published", active: "Happening now", completed: "Completed", cancelled: "Cancelled" })[
+  ({ draft: tr("Draft"), upcoming: tr("Published"), active: tr("Happening now"), completed: tr("Completed"), cancelled: tr("Cancelled") })[
     value
   ] ?? value;
 
@@ -142,20 +124,22 @@ function useOrganizerGate() {
 }
 
 function SignInFirst() {
+  const t = useT();
   return (
     <div className="workspace">
       <EmptyState
         icon="grid"
-        title="Your box office starts here."
-        description="Sign in to create events, sell tickets and manage your guest list."
+        title={t("Your box office starts here.")}
+        description={t("Sign in to create events, sell tickets and manage your guest list.")}
         href="/sign-in?next=/organizer"
-        label="Sign in"
+        label={t("Sign in")}
       />
     </div>
   );
 }
 
 function BecomeOrganizer() {
+  const t = useT();
   const { user } = useSession();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -181,28 +165,24 @@ function BecomeOrganizer() {
   return (
     <main className="workspace narrow-workspace">
       <PageIntro
-        eyebrow="On the other side of the stage"
-        title="Open your box office."
-        description="Create an organizer profile to publish events, sell tickets and welcome your guests."
+        eyebrow={t("On the other side of the stage")}
+        title={t("Open your box office.")}
+        description={t("Create an organizer profile to publish events, sell tickets and welcome your guests.")}
       />
       {!user?.is_email_verified && (
-        <Notice>
-          Confirm your email address first; organizer tools need a confirmed email.{" "}
-          <Link className="text-link" href="/profile">Go to your profile</Link>
+        <Notice>{t("Confirm your email address first; organizer tools need a confirmed email.")}{" "}
+          <Link className="text-link" href="/profile">{t("Go to your profile")}</Link>
         </Notice>
       )}
       <form className="stack-form" onSubmit={submit}>
-        <label>
-          Organizer name (shown on your events)
-          <input name="display_name" required minLength={2} maxLength={255} defaultValue={user?.full_name} />
+        <label>{t("Organizer name (shown on your events)")}<input name="display_name" required minLength={2} maxLength={255} defaultValue={user?.full_name} />
         </label>
-        <label>
-          Contact email for guests <span className="optional">Optional</span>
+        <label>{t("Contact email for guests")}{" "}<span className="optional">{t("Optional")}</span>
           <input name="contact_email" type="email" maxLength={255} placeholder={user?.email} />
         </label>
         {error && <Notice error>{error}</Notice>}
         <button className="btn btn-primary" disabled={busy}>
-          {busy ? "Creating…" : "Create organizer profile"}
+          {busy ? t("Creating…") : t("Create organizer profile")}
         </button>
       </form>
     </main>
@@ -224,6 +204,7 @@ export function OrganizerPage({ view }: { view?: string }) {
 }
 
 function EventsOverview({ view }: { view?: string }) {
+  const t = useT();
   const { user } = useSession();
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
@@ -254,37 +235,35 @@ function EventsOverview({ view }: { view?: string }) {
   return (
     <OrganizerShell active={events_ ? "events" : "overview"}>
       <PageIntro
-        eyebrow={events_ ? "The things you’re putting into the world" : "A little planning. A full house."}
-        title={events_ ? "Your events." : `Hello, ${user?.full_name.split(" ")[0]}.`}
+        eyebrow={events_ ? t("The things you’re putting into the world") : t("A little planning. A full house.")}
+        title={events_ ? t("Your events.") : t("Hello, {name}.", { name: user?.full_name.split(" ")[0] })}
         description={
           events_
-            ? "From the first draft to the last person through the door."
-            : "Here’s how things are shaping up at your box office."
+            ? t("From the first draft to the last person through the door.")
+            : t("Here’s how things are shaping up at your box office.")
         }
         action={
           <Link className="btn btn-primary" href="/organizer/events/new">
-            <Icon name="plus" size={16} />
-            Create event
-          </Link>
+            <Icon name="plus" size={16} />{t("Create event")}</Link>
         }
       />
       {!events_ && (
         <div className="stats-row">
-          <Stat label="Net revenue" value={amount(revenue)} note="After discounts and refunds (simulated)" icon="chart" />
-          <Stat label="Tickets sold" value={sold} note={`Across ${overview.length} ${overview.length === 1 ? "event" : "events"}`} icon="ticket" />
+          <Stat label={t("Net revenue")} value={amount(revenue)} note={t("After discounts and refunds (simulated)")} icon="chart" />
+          <Stat label={t("Tickets sold")} value={sold} note={t.plural(overview.length, "Across {n} event", "Across {n} events")} icon="ticket" />
           <Stat
-            label="Live events"
+            label={t("Live events")}
             value={events.filter((e) => e.lifecycle === "upcoming" || e.lifecycle === "active").length}
-            note={`${events.filter((e) => e.lifecycle === "draft").length} drafts in the wings`}
+            note={t.plural(events.filter((e) => e.lifecycle === "draft").length, "{n} draft in the wings", "{n} drafts in the wings")}
             icon="calendar"
           />
         </div>
       )}
       <div className="section-heading events-heading">
-        <h2>{events_ ? "The event list" : "On your calendar"}</h2>
+        <h2>{events_ ? t("The event list") : t("On your calendar")}</h2>
         <label className="compact-search">
           <Icon name="search" size={16} />
-          <input aria-label="Search your events" placeholder="Find an event" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <input aria-label={t("Search your events")} placeholder={t("Find an event")} value={search} onChange={(e) => setSearch(e.target.value)} />
         </label>
       </div>
       <div className="line-tabs">
@@ -295,7 +274,7 @@ function EventsOverview({ view }: { view?: string }) {
             className={filter === tab.value ? "active" : ""}
             onClick={() => setFilter(tab.value)}
           >
-            {tab.label}
+            {t(tab.label)}
             <span>{events.filter((e) => tab.value === "all" || e.lifecycle === tab.value).length}</span>
           </button>
         ))}
@@ -318,7 +297,7 @@ function EventsOverview({ view }: { view?: string }) {
                   <h3>{event.title}</h3>
                   <p>
                     {eventDate(event.start_at, event.timezone, { weekday: "short", day: "numeric", month: "short" })} ·{" "}
-                    {event.venue_name ?? "Venue to be announced"}
+                    {event.venue_name ?? t("Venue to be announced")}
                     {event.my_role !== "owner" && ` · ${event.my_role}`}
                   </p>
                 </div>
@@ -329,11 +308,11 @@ function EventsOverview({ view }: { view?: string }) {
                   <div className="progress-track">
                     <span style={{ width: `${capacity ? Math.min(100, (booked / capacity) * 100) : 0}%` }} />
                   </div>
-                  <small>tickets sold</small>
+                  <small>{t("tickets sold")}</small>
                 </div>
                 <div className="managed-revenue">
                   <strong>{amount(row?.net_revenue_kzt ?? 0)}</strong>
-                  <small>net revenue</small>
+                  <small>{t("net revenue")}</small>
                 </div>
                 <Icon name="arrow" size={18} />
               </Link>
@@ -343,10 +322,10 @@ function EventsOverview({ view }: { view?: string }) {
       ) : (
         <EmptyState
           icon="calendar"
-          title={events.length ? "No events match just yet." : "It starts with an idea."}
-          description={events.length ? "Try a different search or status." : "Give it a name, pick a date, and invite the city in."}
+          title={events.length ? t("No events match just yet.") : t("It starts with an idea.")}
+          description={events.length ? t("Try a different search or status.") : t("Give it a name, pick a date, and invite the city in.")}
           href="/organizer/events/new"
-          label="Create your first event"
+          label={t("Create your first event")}
         />
       )}
     </OrganizerShell>
@@ -356,10 +335,11 @@ function EventsOverview({ view }: { view?: string }) {
 type DraftTicket = { key: string; name: string; description: string; price: number; quantity: number };
 
 export function EventEditor({ existing, onSaved }: { existing?: ApiEvent; onSaved?: (event: ApiEvent) => void }) {
+  const t = useT();
   const router = useRouter();
   const [seating, setSeating] = useState(existing?.seating_type ?? "general_admission");
   const [types, setTypes] = useState<DraftTicket[]>([
-    { key: "t1", name: "General admission", description: "Entry to the event.", price: 0, quantity: 100 },
+    { key: "t1", name: t("General admission"), description: t("Entry to the event."), price: 0, quantity: 100 },
   ]);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -370,7 +350,7 @@ export function EventEditor({ existing, onSaved }: { existing?: ApiEvent; onSave
   const knownCity = !existing?.city || CITIES.includes(existing.city);
 
   function change(index: number, patch: Partial<DraftTicket>) {
-    setTypes((items) => items.map((t, i) => (i === index ? { ...t, ...patch } : t)));
+    setTypes((items) => items.map((type, i) => (i === index ? { ...type, ...patch } : type)));
   }
 
   async function submit(e: FormEvent<HTMLFormElement>) {
@@ -379,7 +359,7 @@ export function EventEditor({ existing, onSaved }: { existing?: ApiEvent; onSave
     const text = (name: string) => String(data.get(name) ?? "").trim();
     const startAt = fromLocalInputs(text("date"), text("time"));
     const endAt = fromLocalInputs(text("end_date") || text("date"), text("end_time"));
-    if (startAt && endAt && endAt <= startAt) return setError("The event has to end after it starts.");
+    if (startAt && endAt && endAt <= startAt) return setError(t("The event has to end after it starts."));
     const city = text("city") === "other" ? text("other_city") : text("city");
     const body = {
       title: text("title"),
@@ -405,8 +385,8 @@ export function EventEditor({ existing, onSaved }: { existing?: ApiEvent; onSave
         const saved = await api.request<ApiEvent>(`/events/${existing.id}`, { method: "PATCH", body });
         setMessage(
           existing.status === "published"
-            ? "Changes saved. Ticket holders are told by email about date, time and venue changes."
-            : "Changes saved.",
+            ? t("Changes saved. Ticket holders are told by email about date, time and venue changes.")
+            : t("Changes saved."),
         );
         onSaved?.(saved);
       } else {
@@ -420,7 +400,7 @@ export function EventEditor({ existing, onSaved }: { existing?: ApiEvent; onSave
         router.push(`/organizer/events/${created.id}${seating === "assigned" ? "?tab=Tickets&seating=1" : ""}`);
       }
     } catch (e) {
-      setError(failure(e, "Could not save this event."));
+      setError(failure(e, t("Could not save this event.")));
     } finally {
       setBusy(false);
     }
@@ -431,22 +411,17 @@ export function EventEditor({ existing, onSaved }: { existing?: ApiEvent; onSave
       <section className="editor-section">
         <div className="editor-section-label">
           <span className="step-number">01</span>
-          <h2>The essentials</h2>
-          <p>Give people a reason to put this in their calendar.</p>
+          <h2>{t("The essentials")}</h2>
+          <p>{t("Give people a reason to put this in their calendar.")}</p>
         </div>
         <div className="stack-form">
-          <label>
-            Event name
-            <input name="title" defaultValue={existing?.title} placeholder="Something worth showing up for" minLength={3} maxLength={255} required />
+          <label>{t("Event name")}<input name="title" defaultValue={existing?.title} placeholder={t("Something worth showing up for")} minLength={3} maxLength={255} required />
           </label>
-          <label>
-            A line for the poster <span className="optional">Optional</span>
-            <input name="subtitle" defaultValue={existing?.subtitle ?? ""} placeholder="One good sentence about your event" maxLength={255} />
+          <label>{t("A line for the poster")}{" "}<span className="optional">{t("Optional")}</span>
+            <input name="subtitle" defaultValue={existing?.subtitle ?? ""} placeholder={t("One good sentence about your event")} maxLength={255} />
           </label>
           <div className="form-two">
-            <label>
-              Category
-              <select name="category" defaultValue={existing?.category ?? "concert"}>
+            <label>{t("Category")}<select name="category" defaultValue={existing?.category ?? "concert"}>
                 {CATEGORIES.map((c) => (
                   <option key={c.value} value={c.value}>{c.label}</option>
                 ))}
@@ -455,21 +430,17 @@ export function EventEditor({ existing, onSaved }: { existing?: ApiEvent; onSave
                 )}
               </select>
             </label>
-            <label>
-              Who can find it
-              <select name="visibility" defaultValue={existing?.visibility ?? "public"}>
-                <option value="public">Public — listed on BiletFlow</option>
-                <option value="unlisted">Unlisted — only people with the link</option>
-                <option value="private">Private — only your team</option>
+            <label>{t("Who can find it")}<select name="visibility" defaultValue={existing?.visibility ?? "public"}>
+                <option value="public">{t("Public — listed on BiletFlow")}</option>
+                <option value="unlisted">{t("Unlisted — only people with the link")}</option>
+                <option value="private">{t("Private — only your team")}</option>
               </select>
             </label>
           </div>
-          <label>
-            About the event
-            <textarea
+          <label>{t("About the event")}<textarea
               name="description"
               defaultValue={existing?.description ?? ""}
-              placeholder="The lineup, the atmosphere, the things people should know…"
+              placeholder={t("The lineup, the atmosphere, the things people should know…")}
               rows={5}
               maxLength={10000}
             />
@@ -479,83 +450,64 @@ export function EventEditor({ existing, onSaved }: { existing?: ApiEvent; onSave
       <section className="editor-section">
         <div className="editor-section-label">
           <span className="step-number">02</span>
-          <h2>A time & a place</h2>
-          <p>Times are Kazakhstan time (UTC+5).</p>
+          <h2>{t("A time & a place")}</h2>
+          <p>{t("Times are Kazakhstan time (UTC+5).")}</p>
         </div>
         <div className="stack-form">
           <div className="form-two">
-            <label>
-              Date
-              <input type="date" name="date" min={existing ? undefined : today} defaultValue={start.date} required />
+            <label>{t("Date")}<input type="date" name="date" min={existing ? undefined : today} defaultValue={start.date} required />
             </label>
-            <label>
-              Starts at
-              <input type="time" name="time" defaultValue={start.time || "19:00"} required />
+            <label>{t("Starts at")}<input type="time" name="time" defaultValue={start.time || "19:00"} required />
             </label>
           </div>
           <div className="form-two">
-            <label>
-              Ends on <span className="optional">If not the same day</span>
+            <label>{t("Ends on")}{" "}<span className="optional">{t("If not the same day")}</span>
               <input type="date" name="end_date" defaultValue={end.date !== start.date ? end.date : ""} />
             </label>
-            <label>
-              Ends at
-              <input type="time" name="end_time" defaultValue={end.time || "22:00"} required />
+            <label>{t("Ends at")}<input type="time" name="end_time" defaultValue={end.time || "22:00"} required />
             </label>
           </div>
           <div className="form-two">
-            <label>
-              Venue
-              <input name="venue_name" defaultValue={existing?.venue_name ?? ""} placeholder="Venue name" maxLength={255} required />
+            <label>{t("Venue")}<input name="venue_name" defaultValue={existing?.venue_name ?? ""} placeholder={t("Venue name")} maxLength={255} required />
             </label>
-            <label>
-              City
-              <select name="city" defaultValue={knownCity ? (existing?.city ?? "Almaty") : "other"}>
+            <label>{t("City")}<select name="city" defaultValue={knownCity ? (existing?.city ?? "Almaty") : "other"}>
                 {CITIES.map((c) => (
-                  <option key={c}>{c}</option>
+                  <option key={c} value={c}>
+                    {t(c)}
+                  </option>
                 ))}
-                <option value="other">Another city…</option>
+                <option value="other">{t("Another city…")}</option>
               </select>
             </label>
           </div>
           {!knownCity && (
-            <label>
-              City name
-              <input name="other_city" defaultValue={existing?.city ?? ""} maxLength={100} />
+            <label>{t("City name")}<input name="other_city" defaultValue={existing?.city ?? ""} maxLength={100} />
             </label>
           )}
-          <label>
-            Street address <span className="optional">Optional</span>
+          <label>{t("Street address")}{" "}<span className="optional">{t("Optional")}</span>
             <input name="venue_address" defaultValue={existing?.venue_address ?? ""} maxLength={500} />
           </label>
           <div className="form-two">
-            <label>
-              Capacity
-              <input type="number" name="capacity" min={1} max={1000000} defaultValue={existing?.capacity ?? 100} required />
+            <label>{t("Capacity")}<input type="number" name="capacity" min={1} max={1000000} defaultValue={existing?.capacity ?? 100} required />
               <span className="field-hint">
                 {seating === "assigned"
-                  ? "With numbered seats, the hall you choose next sets the capacity"
-                  : "All ticket types together cannot exceed it"}
+                  ? t("With numbered seats, the hall you choose next sets the capacity")
+                  : t("All ticket types together cannot exceed it")}
               </span>
             </label>
             {!existing ? (
-              <label>
-                Seating
-                <select value={seating} onChange={(e) => setSeating(e.target.value as typeof seating)}>
-                  <option value="general_admission">General admission</option>
-                  <option value="assigned">Numbered seats (choose a venue next)</option>
+              <label>{t("Seating")}<select value={seating} onChange={(e) => setSeating(e.target.value as typeof seating)}>
+                  <option value="general_admission">{t("General admission")}</option>
+                  <option value="assigned">{t("Numbered seats (choose a venue next)")}</option>
                 </select>
               </label>
             ) : (
-              <label>
-                Seating
-                <input value={existing.seating_type === "assigned" ? "Numbered seats" : "General admission"} disabled />
+              <label>{t("Seating")}<input value={existing.seating_type === "assigned" ? t("Numbered seats") : t("General admission")} disabled />
               </label>
             )}
           </div>
-          <label>
-            Refund policy <span className="optional">Optional</span>
-            <textarea name="refund_policy" rows={2} maxLength={5000} defaultValue={existing?.refund_policy ?? ""} placeholder="For example: full refund up to 48 hours before the event." />
+          <label>{t("Refund policy")}{" "}<span className="optional">{t("Optional")}</span>
+            <textarea name="refund_policy" rows={2} maxLength={5000} defaultValue={existing?.refund_policy ?? ""} placeholder={t("For example: full refund up to 48 hours before the event.")} />
           </label>
         </div>
       </section>
@@ -563,37 +515,29 @@ export function EventEditor({ existing, onSaved }: { existing?: ApiEvent; onSave
         <section className="editor-section">
           <div className="editor-section-label">
             <span className="step-number">03</span>
-            <h2>A way in</h2>
-            <p>Make it free, or set a price in tenge. Paid sales open after the activation checklist.</p>
+            <h2>{t("A way in")}</h2>
+            <p>{t("Make it free, or set a price in tenge. Paid sales open after the activation checklist.")}</p>
           </div>
           <div className="ticket-type-editor">
-            {types.map((t, i) => (
-              <div className="ticket-type-form" key={t.key}>
+            {types.map((type, i) => (
+              <div className="ticket-type-form" key={type.key}>
                 <div className="ticket-type-heading">
-                  <span>Ticket type {String(i + 1).padStart(2, "0")}</span>
+                  <span>{t("Ticket type")}{" "}{String(i + 1).padStart(2, "0")}</span>
                   {types.length > 1 && (
-                    <button type="button" className="icon-button" aria-label={`Remove ticket type ${t.name}`} onClick={() => setTypes((items) => items.filter((x) => x.key !== t.key))}>
+                    <button type="button" className="icon-button" aria-label={t("Remove ticket type {name}", { name: type.name })} onClick={() => setTypes((items) => items.filter((x) => x.key !== type.key))}>
                       <Icon name="close" size={16} />
                     </button>
                   )}
                 </div>
-                <label>
-                  Ticket name
-                  <input value={t.name} onChange={(e) => change(i, { name: e.target.value })} required minLength={2} maxLength={100} />
+                <label>{t("Ticket name")}<input value={type.name} onChange={(e) => change(i, { name: e.target.value })} required minLength={2} maxLength={100} />
                 </label>
-                <label>
-                  What&apos;s included
-                  <input value={t.description} onChange={(e) => change(i, { description: e.target.value })} maxLength={500} />
+                <label>{t("What's included")}<input value={type.description} onChange={(e) => change(i, { description: e.target.value })} maxLength={500} />
                 </label>
                 <div className="form-two">
-                  <label>
-                    Price · KZT
-                    <input type="number" min={0} max={10000000} value={t.price} onChange={(e) => change(i, { price: e.target.valueAsNumber || 0 })} required />
-                    <span className="field-hint">0 = free registration</span>
+                  <label>{t("Price · KZT")}<input type="number" min={0} max={10000000} value={type.price} onChange={(e) => change(i, { price: e.target.valueAsNumber || 0 })} required />
+                    <span className="field-hint">{t("0 = free registration")}</span>
                   </label>
-                  <label>
-                    Quantity
-                    <input type="number" min={1} max={1000000} value={t.quantity} onChange={(e) => change(i, { quantity: e.target.valueAsNumber || 0 })} required />
+                  <label>{t("Quantity")}<input type="number" min={1} max={1000000} value={type.quantity} onChange={(e) => change(i, { quantity: e.target.valueAsNumber || 0 })} required />
                   </label>
                 </div>
               </div>
@@ -603,9 +547,7 @@ export function EventEditor({ existing, onSaved }: { existing?: ApiEvent; onSave
               type="button"
               onClick={() => setTypes((items) => [...items, { key: `t${Date.now()}`, name: "", description: "", price: 0, quantity: 50 }])}
             >
-              <Icon name="plus" size={16} />
-              Add ticket type
-            </button>
+              <Icon name="plus" size={16} />{t("Add ticket type")}</button>
           </div>
         </section>
       )}
@@ -614,11 +556,11 @@ export function EventEditor({ existing, onSaved }: { existing?: ApiEvent; onSave
       <div className="editor-footer">
         <p>
           {existing
-            ? "Existing orders keep the price they were bought at."
-            : "Your event starts as a draft. Publish it when you’re ready."}
+            ? t("Existing orders keep the price they were bought at.")
+            : t("Your event starts as a draft. Publish it when you’re ready.")}
         </p>
         <button className="btn btn-primary" type="submit" disabled={busy}>
-          {busy ? "Saving…" : existing ? "Save changes" : "Create draft"}
+          {busy ? t("Saving…") : existing ? t("Save changes") : t("Create draft")}
           <Icon name="arrow" size={16} />
         </button>
       </div>
@@ -627,6 +569,7 @@ export function EventEditor({ existing, onSaved }: { existing?: ApiEvent; onSave
 }
 
 export function NewEventPage() {
+  const t = useT();
   const gate = useOrganizerGate();
   if (!gate.ready) return <LoadingPage />;
   if (!gate.user) return <SignInFirst />;
@@ -634,18 +577,15 @@ export function NewEventPage() {
   return (
     <OrganizerShell active="events">
       <Link className="text-link muted back-link" href="/organizer">
-        <Icon name="back" size={15} />
-        Your events
-      </Link>
+        <Icon name="back" size={15} />{t("Your events")}</Link>
       <PageIntro
-        eyebrow="From an idea to a full room"
-        title="Let’s put it on the calendar."
-        description="Start with the essentials. The rest can take shape as you go."
+        eyebrow={t("From an idea to a full room")}
+        title={t("Let’s put it on the calendar.")}
+        description={t("Start with the essentials. The rest can take shape as you go.")}
       />
       {!gate.user.is_email_verified && (
-        <Notice error>
-          Please confirm your email address before creating events.{" "}
-          <Link className="text-link" href="/profile">Resend the link</Link>
+        <Notice error>{t("Please confirm your email address before creating events.")}{" "}
+          <Link className="text-link" href="/profile">{t("Resend the link")}</Link>
         </Notice>
       )}
       <EventEditor />
@@ -653,7 +593,7 @@ export function NewEventPage() {
   );
 }
 
-const TABS = ["Overview", "Tickets", "Paid sales", "Promotions", "Attendees", "Sales", "Team", "Activity", "Details"];
+const TABS = [tk("Overview"), tk("Tickets"), tk("Paid sales"), tk("Promotions"), tk("Attendees"), tk("Sales"), tk("Team"), tk("Activity"), tk("Details")];
 
 export type EventContext = {
   event: ApiEvent;
@@ -664,6 +604,7 @@ export type EventContext = {
 };
 
 export function ManageEventPage({ id, tab: initialTab }: { id: string; tab?: string }) {
+  const t = useT();
   const gate = useOrganizerGate();
   const [tab, setTab] = useState(TABS.includes(initialTab ?? "") ? initialTab! : "Overview");
   const [notice, setNotice] = useState<{ text: string; error: boolean } | null>(null);
@@ -678,10 +619,10 @@ export function ManageEventPage({ id, tab: initialTab }: { id: string; tab?: str
     return (
       <OrganizerShell>
         <EmptyState
-          title="This isn’t one of your events."
-          description={data.httpStatus === 404 ? "The event may have been removed, or the link is wrong." : data.error.message}
+          title={t("This isn’t one of your events.")}
+          description={data.httpStatus === 404 ? t("The event may have been removed, or the link is wrong.") : data.error.message}
           href="/organizer"
-          label="Back to your events"
+          label={t("Back to your events")}
         />
       </OrganizerShell>
     );
@@ -691,10 +632,10 @@ export function ManageEventPage({ id, tab: initialTab }: { id: string; tab?: str
     return (
       <OrganizerShell>
         <EmptyState
-          title="This isn’t one of your events."
-          description="Only the event's owner and managers can open its workspace. Check-in staff use the check-in desk."
+          title={t("This isn’t one of your events.")}
+          description={t("Only the event's owner and managers can open its workspace. Check-in staff use the check-in desk.")}
           href={role ? "/check-in" : "/organizer"}
-          label={role ? "Open the check-in desk" : "Back to your events"}
+          label={role ? t("Open the check-in desk") : t("Back to your events")}
         />
       </OrganizerShell>
     );
@@ -714,34 +655,32 @@ export function ManageEventPage({ id, tab: initialTab }: { id: string; tab?: str
   return (
     <OrganizerShell active="events">
       <Link className="text-link muted back-link" href="/organizer?view=events">
-        <Icon name="back" size={15} />
-        Your events
-      </Link>
+        <Icon name="back" size={15} />{t("Your events")}</Link>
       <div className="manage-title">
         <span className={`status-badge ${live ? "status-live" : ""}`}>{lifecycleLabel(event.lifecycle)}</span>
         <span>
           {eventDate(event.start_at, event.timezone, { weekday: "short", day: "numeric", month: "short" })} ·{" "}
-          {eventTime(event.start_at, event.timezone)} · {event.city ?? "City to be announced"}
-          {event.is_suspended && " · suspended by the platform"}
+          {eventTime(event.start_at, event.timezone)} · {event.city ?? t("City to be announced")}
+          {event.is_suspended && t(" · suspended by the platform")}
         </span>
       </div>
       <PageIntro
-        eyebrow={`Your event · ${role === "owner" ? "owner" : "manager"}`}
+        eyebrow={role === "owner" ? t("Your event · owner") : t("Your event · manager")}
         title={event.title}
         action={<EventActions ctx={ctx} />}
       />
       <div className="line-tabs manage-tabs">
-        {TABS.map((t) => (
+        {TABS.map((key) => (
           <button
-            aria-pressed={tab === t}
-            className={tab === t ? "active" : ""}
-            key={t}
+            aria-pressed={tab === key}
+            className={tab === key ? "active" : ""}
+            key={key}
             onClick={() => {
-              setTab(t);
+              setTab(key);
               setNotice(null);
             }}
           >
-            {t}
+            {t(key)}
           </button>
         ))}
       </div>
@@ -756,13 +695,14 @@ export function ManageEventPage({ id, tab: initialTab }: { id: string; tab?: str
       {tab === "Activity" && <ActivityTab ctx={ctx} />}
       {tab === "Details" && <EventEditor existing={event} onSaved={ctx.setEvent} />}
       <div className="event-support-actions">
-        <SupportLink eventId={event.id} platform label="Get platform support for this event" />
+        <SupportLink eventId={event.id} platform label={t("Get platform support for this event")} />
       </div>
     </OrganizerShell>
   );
 }
 
 function EventActions({ ctx }: { ctx: EventContext }) {
+  const t = useT();
   const { event, role } = ctx;
   const router = useRouter();
   const [busy, setBusy] = useState("");
@@ -791,14 +731,11 @@ function EventActions({ ctx }: { ctx: EventContext }) {
   return (
     <div className="button-row">
       {event.status === "published" && (
-        <Link className="btn btn-secondary" href={`/events/${event.id}`}>
-          View event <Icon name="external" size={14} />
+        <Link className="btn btn-secondary" href={`/events/${event.id}`}>{t("View event")}{" "}<Icon name="external" size={14} />
         </Link>
       )}
       {draft && (
-        <Link className="btn btn-secondary" href={`/events/${event.id}`}>
-          Preview
-        </Link>
+        <Link className="btn btn-secondary" href={`/events/${event.id}`}>{t("Preview")}</Link>
       )}
       {!ended && (
         <button
@@ -806,29 +743,25 @@ function EventActions({ ctx }: { ctx: EventContext }) {
           disabled={!!busy}
           onClick={() =>
             draft
-              ? act("publish", "publish", "Your event is published.")
-              : act("unpublish", "unpublish", "Event unpublished. Existing orders are kept.")
+              ? act("publish", "publish", t("Your event is published."))
+              : act("unpublish", "unpublish", t("Event unpublished. Existing orders are kept."))
           }
         >
-          {busy === "publish" || busy === "unpublish" ? "Saving…" : draft ? "Publish event" : "Unpublish"}
+          {busy === "publish" || busy === "unpublish" ? t("Saving…") : draft ? t("Publish event") : t("Unpublish")}
         </button>
       )}
       <button className="btn btn-secondary" disabled={!!busy} onClick={() => act("duplicate", "duplicate", "")}>
-        {busy === "duplicate" ? "Copying…" : "Duplicate"}
+        {busy === "duplicate" ? t("Copying…") : t("Duplicate")}
       </button>
       {role === "owner" && !ended && event.status !== "draft" &&
         (confirmCancel ? (
           <span className="cancel-order">
-            <span>Cancel the event and refund every order?</span>
-            <button className="text-button danger" disabled={!!busy} onClick={() => act("cancel", "cancel", "Event cancelled. Paid orders were refunded (simulated) and ticket holders were emailed.")}>
-              Yes, cancel event
-            </button>
-            <button className="text-button" onClick={() => setConfirmCancel(false)}>Keep it</button>
+            <span>{t("Cancel the event and refund every order?")}</span>
+            <button className="text-button danger" disabled={!!busy} onClick={() => act("cancel", "cancel", t("Event cancelled. Paid orders were refunded (simulated) and ticket holders were emailed."))}>{t("Yes, cancel event")}</button>
+            <button className="text-button" onClick={() => setConfirmCancel(false)}>{t("Keep it")}</button>
           </span>
         ) : (
-          <button className="btn btn-secondary" onClick={() => setConfirmCancel(true)}>
-            Cancel event
-          </button>
+          <button className="btn btn-secondary" onClick={() => setConfirmCancel(true)}>{t("Cancel event")}</button>
         ))}
     </div>
   );

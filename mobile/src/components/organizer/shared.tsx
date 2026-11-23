@@ -6,6 +6,7 @@ import { eventDate, eventTime } from "@/lib/events";
 import type { StaffRole } from "@/lib/organizer";
 import { Field, Row } from "../ui";
 
+import { useT , tr } from "@/lib/i18n";
 export type EventContext = {
   event: ApiEvent;
   role: StaffRole;
@@ -15,7 +16,7 @@ export type EventContext = {
 };
 
 export const lifecycleLabel = (value: string) =>
-  ({ draft: "Draft", upcoming: "Published", active: "Happening now", completed: "Completed", cancelled: "Cancelled" })[value] ?? value;
+  ({ draft: tr("Draft"), upcoming: tr("Published"), active: tr("Happening now"), completed: tr("Completed"), cancelled: tr("Cancelled") })[value] ?? value;
 
 export const when = (iso: string, event: Pick<ApiEvent, "timezone">) =>
   `${eventDate(iso, event.timezone, { day: "numeric", month: "short", year: "numeric" })}, ${eventTime(iso, event.timezone)}`;
@@ -43,6 +44,7 @@ export function DateTimeFields({
   optional?: boolean;
   hint?: string;
 }) {
+  const t = useT();
   return (
     <Row wrap={false} style={{ alignItems: "flex-start" }}>
       <View style={{ flex: 3 }}>
@@ -51,21 +53,21 @@ export function DateTimeFields({
           optional={optional}
           value={date}
           onChangeText={onDate}
-          placeholder="YYYY-MM-DD"
+          placeholder={t("YYYY-MM-DD")}
           keyboardType="numbers-and-punctuation"
           maxLength={10}
-          hint={date && !validDate(date) ? "Use the form 2026-12-31" : hint}
+          hint={date && !validDate(date) ? t("Use the form 2026-12-31") : hint}
         />
       </View>
       <View style={{ flex: 2 }}>
         <Field
-          label="Time"
+          label={t("Time")}
           value={time}
           onChangeText={onTime}
-          placeholder="HH:MM"
+          placeholder={t("HH:MM")}
           keyboardType="numbers-and-punctuation"
           maxLength={5}
-          hint={time && !validTime(time) ? "Use 24-hour time, 19:30" : undefined}
+          hint={time && !validTime(time) ? t("Use 24-hour time, 19:30") : undefined}
         />
       </View>
     </Row>

@@ -14,9 +14,11 @@ import { useSession } from "@/components/session";
 import { useLoad } from "@/components/use-load";
 import { Badge, Button, Chips, Empty, Eyebrow, H1, Loading, Notice, Row, Screen, T } from "@/components/ui";
 
-const TABS = ["Overview", "Tickets", "Paid sales", "Promotions", "Attendees", "Sales", "Team", "Activity", "Details"];
+import { useT , tk } from "@/lib/i18n";
+const TABS = [tk("Overview"), tk("Tickets"), tk("Paid sales"), tk("Promotions"), tk("Attendees"), tk("Sales"), tk("Team"), tk("Activity"), tk("Details")];
 
 export default function ManageEvent() {
+  const t = useT();
   const params = useLocalSearchParams<{ id: string; tab?: string; seating?: string }>();
   const id = params.id;
   const { ready, user, staffEvents } = useSession();
@@ -36,16 +38,16 @@ export default function ManageEvent() {
   if (!user)
     return (
       <Screen>
-        <Empty title="Sign in to manage this event." action="Sign in" onAction={() => signInFirst(`/organizer/${id}`)} />
+        <Empty title={t("Sign in to manage this event.")} action={t("Sign in")} onAction={() => signInFirst(`/organizer/${id}`)} />
       </Screen>
     );
   if (data.status === "error" && !data.data)
     return (
       <Screen>
         <Empty
-          title="This isn’t one of your events."
-          description={data.httpStatus === 404 ? "The event may have been removed, or the link is wrong." : data.error?.message}
-          action="Back to your events"
+          title={t("This isn’t one of your events.")}
+          description={data.httpStatus === 404 ? t("The event may have been removed, or the link is wrong.") : data.error?.message}
+          action={t("Back to your events")}
           onAction={() => router.replace("/organizer")}
         />
       </Screen>
@@ -61,9 +63,9 @@ export default function ManageEvent() {
     return (
       <Screen>
         <Empty
-          title="This isn’t one of your events."
-          description="Only the event's owner and managers can open its workspace. Check-in staff use the check-in desk."
-          action={role ? "Open the check-in desk" : "Back to your events"}
+          title={t("This isn’t one of your events.")}
+          description={t("Only the event's owner and managers can open its workspace. Check-in staff use the check-in desk.")}
+          action={role ? t("Open the check-in desk") : t("Back to your events")}
           onAction={() => router.replace(role ? "/check-in" : "/organizer")}
         />
       </Screen>
@@ -85,23 +87,23 @@ export default function ManageEvent() {
       <Stack.Screen options={{ title: event.title }} />
       <Row>
         <Badge tone={live ? "live" : "neutral"} label={lifecycleLabel(event.lifecycle)} />
-        {event.is_suspended && <Badge tone="bad" label="Suspended by the platform" />}
+        {event.is_suspended && <Badge tone="bad" label={t("Suspended by the platform")} />}
       </Row>
       <T small muted>
-        {eventDate(event.start_at, event.timezone, { weekday: "short", day: "numeric", month: "short" })} · {eventTime(event.start_at, event.timezone)} · {event.city ?? "City to be announced"}
+        {eventDate(event.start_at, event.timezone, { weekday: "short", day: "numeric", month: "short" })} · {eventTime(event.start_at, event.timezone)} · {event.city ?? t("City to be announced")}
       </T>
       <View style={{ gap: 4 }}>
-        <Eyebrow>Your event · {role === "owner" ? "owner" : "manager"}</Eyebrow>
+        <Eyebrow>{role === "owner" ? t("Your event · owner") : t("Your event · manager")}</Eyebrow>
         <H1>{event.title}</H1>
       </View>
       <EventActions ctx={ctx} />
       <Chips
         value={tab}
-        onChange={(t) => {
-          setTab(t);
+        onChange={(key) => {
+          setTab(key);
           setNotice(null);
         }}
-        options={TABS.map((t) => ({ value: t, label: t }))}
+        options={TABS.map((key) => ({ value: key, label: t(key) }))}
       />
       {notice && <Notice error={notice.error} onDismiss={() => setNotice(null)}>{notice.text}</Notice>}
       {tab === "Overview" && <OverviewTab ctx={ctx} />}
@@ -113,7 +115,7 @@ export default function ManageEvent() {
       {tab === "Team" && <TeamTab ctx={ctx} />}
       {tab === "Activity" && <ActivityTab ctx={ctx} />}
       {tab === "Details" && <EventEditor existing={event} onSaved={ctx.setEvent} />}
-      <Button kind="text" icon="help-buoy-outline" label="Get platform support for this event" onPress={() => openSupport({ event: event.id, to: "platform" })} />
+      <Button kind="text" icon="help-buoy-outline" label={t("Get platform support for this event")} onPress={() => openSupport({ event: event.id, to: "platform" })} />
     </Screen>
   );
 }

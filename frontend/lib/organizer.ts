@@ -1,17 +1,18 @@
 /** Organizer-side data as the BiletFlow backend returns it. */
 
 import type { ApiEvent, TicketType } from "./events";
+import { tk, translatedRecord } from "./i18n";
 
 export type StaffRole = "owner" | "manager" | "checkin_staff" | "support_staff";
 
 export type MyEvent = ApiEvent & { my_role: StaffRole };
 
-export const ROLE_LABELS: Record<StaffRole, string> = {
-  owner: "Owner",
-  manager: "Manager",
-  checkin_staff: "Check-in staff",
-  support_staff: "Support staff",
-};
+export const ROLE_LABELS: Record<StaffRole, string> = translatedRecord({
+  owner: tk("Owner"),
+  manager: tk("Manager"),
+  checkin_staff: tk("Check-in staff"),
+  support_staff: tk("Support staff"),
+});
 
 /** Owners and managers run the event; the others help on the day. */
 export const canManageRole = (role?: string | null) => role === "owner" || role === "manager";

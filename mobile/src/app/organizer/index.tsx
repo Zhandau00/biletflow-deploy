@@ -5,7 +5,9 @@ import { BecomeOrganizer, EventsOverview } from "@/components/organizer/pages";
 import { useSession } from "@/components/session";
 import { Empty, Loading, Screen } from "@/components/ui";
 
+import { useT } from "@/lib/i18n";
 export default function OrganizerHome() {
+  const t = useT();
   const { ready, user, isOrganizer } = useSession();
   const [version, setVersion] = useState(0);
   if (!ready)
@@ -17,7 +19,7 @@ export default function OrganizerHome() {
   if (!user)
     return (
       <Screen>
-        <Empty icon="grid-outline" title="Your box office starts here." action="Sign in" onAction={() => signInFirst("/organizer")} />
+        <Empty icon="grid-outline" title={t("Your box office starts here.")} action={t("Sign in")} onAction={() => signInFirst("/organizer")} />
       </Screen>
     );
   return <Screen onRefresh={() => setVersion((v) => v + 1)}>{isOrganizer ? <EventsOverview version={version} /> : <BecomeOrganizer />}</Screen>;

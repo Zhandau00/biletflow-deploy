@@ -5,11 +5,14 @@ import { signInFirst } from "@/components/links";
 import { useSession } from "@/components/session";
 import { Empty, Loading, Screen } from "@/components/ui";
 
+import { useT } from "@/lib/i18n";
 export default function AdminSection({ view: fixed }: { view?: string }) {
+  const t = useT();
   const params = useLocalSearchParams<{ view?: string }>();
   const { ready, user, isAdmin } = useSession();
   const view = ADMIN_VIEWS.some(([key]) => key === (fixed ?? params.view)) ? (fixed ?? params.view)! : "overview";
-  const title = ADMIN_VIEWS.find(([key]) => key === view)?.[1] ?? "Administration";
+  const found = ADMIN_VIEWS.find(([key]) => key === view)?.[1];
+  const title = found ? t(found) : t("Administration");
   if (!ready)
     return (
       <Screen>
@@ -21,16 +24,16 @@ export default function AdminSection({ view: fixed }: { view?: string }) {
       <Screen>
         <Empty
           icon="shield-outline"
-          title="Platform administration."
-          description={user ? "This area is for the BiletFlow platform team." : "Sign in with a platform administrator account."}
-          action={user ? "Back to BiletFlow" : "Sign in"}
+          title={t("Platform administration.")}
+          description={user ? t("This area is for the BiletFlow platform team.") : t("Sign in with a platform administrator account.")}
+          action={user ? t("Back to BiletFlow") : t("Sign in")}
           onAction={() => (user ? router.replace("/") : signInFirst("/admin"))}
         />
       </Screen>
     );
   return (
     <Screen>
-      <Stack.Screen options={{ title: view === "overview" ? "Administration" : title }} />
+      <Stack.Screen options={{ title: view === "overview" ? t("Administration") : title }} />
       <AdminView key={view} view={view} me={user.id} />
     </Screen>
   );
