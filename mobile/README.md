@@ -11,7 +11,7 @@ The BiletFlow app for Android and iOS (Expo SDK 58, React Native, Expo Router). 
 
 ## Languages
 
-The attendee screens (events, checkout, tickets, account, sign-in, support, notifications) are in Kazakh, Russian and English. The switch on the Account tab (and on sign-up) changes it at once; it is remembered on the phone, and for a signed-in account it is saved as the profile language, so the website, emails and notifications follow. Without a choice the phone's language decides. Organizer, check-in and admin screens stay in English.
+Every screen (attendee, organizer, check-in and admin) is in Kazakh, Russian and English. The switch on the Account tab (and on sign-up) changes it at once; it is remembered on the phone, and for a signed-in account it is saved as the profile language, so the website, emails and notifications follow. Without a choice the phone's language decides.
 
 Screens write English inside `t("…")` from `useT()` (`src/lib/i18n.ts`); the Russian and Kazakh versions are in `src/locales/ru.json` and `src/locales/kk.json`, the same files as the website's. `npm test` fails when a text has no translation.
 
