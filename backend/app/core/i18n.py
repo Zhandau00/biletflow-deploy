@@ -242,13 +242,33 @@ _CATALOG: dict[str, dict[str, str]] = {
     "paid_sales_suspended.body": {
         "en": "Hello {name},\n\nThe BiletFlow team has suspended paid ticket sales for "
         "{event}.\nReason: {reason}\n\nFree registrations and tickets already sold are "
-        "not affected. Reply through platform support to resolve this.",
+        "not affected. Payouts for this event are on hold until the review ends "
+        "(simulated). Reply through platform support to resolve this.",
         "ru": "Здравствуйте, {name}!\n\nКоманда BiletFlow приостановила продажу платных "
         "билетов на «{event}».\nПричина: {reason}\n\nБесплатные регистрации и уже "
-        "проданные билеты не затронуты. Напишите в поддержку платформы.",
+        "проданные билеты не затронуты. Выплаты по этому событию заморожены до конца "
+        "проверки (демонстрация). Напишите в поддержку платформы.",
         "kk": "Сәлеметсіз бе, {name}!\n\nBiletFlow командасы «{event}» ақылы билет "
         "сатуын тоқтатты.\nСебебі: {reason}\n\nТегін тіркелу мен сатылған билеттерге "
-        "әсер етпейді. Платформа қолдауына жазыңыз.",
+        "әсер етпейді. Бұл іс-шара бойынша төлемдер тексеру аяқталғанша тоқтатылды "
+        "(демонстрация). Платформа қолдауына жазыңыз.",
+    },
+    # "Organizer payout status" (SRS 4.10): the hold set by a suspension ends
+    "paid_sales_resumed.title": {
+        "en": "Paid sales and payouts resumed for {event}",
+        "ru": "Платные продажи и выплаты возобновлены: «{event}»",
+        "kk": "Ақылы сату мен төлемдер қайта басталды: «{event}»",
+    },
+    "paid_sales_resumed.body": {
+        "en": "Hello {name},\n\nThe BiletFlow team has finished its review of {event}. "
+        "Paid tickets can be bought again, and payouts for this event are no longer "
+        "on hold. In this demonstration no real money is paid out.",
+        "ru": "Здравствуйте, {name}!\n\nКоманда BiletFlow завершила проверку «{event}». "
+        "Платные билеты снова можно купить, выплаты по этому событию больше не "
+        "заморожены. В демонстрации реальные выплаты не производятся.",
+        "kk": "Сәлеметсіз бе, {name}!\n\nBiletFlow командасы «{event}» тексеруін "
+        "аяқтады. Ақылы билеттерді қайта сатып алуға болады, бұл іс-шара бойынша "
+        "төлемдер енді тоқтатылмайды. Демонстрацияда нақты төлем жасалмайды.",
     },
     "payout_saved.title": {
         "en": "Payout account verified",

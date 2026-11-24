@@ -353,7 +353,9 @@ async def suspend(
     return await _response(db, event, activation)
 
 
-async def resume(db: AsyncSession, event_id: UUID, admin: User) -> ActivationResponse:
+async def resume(
+    db: AsyncSession, event_id: UUID, admin: User, background: BackgroundTasks
+) -> ActivationResponse:
     event = await event_service.get_event(db, event_id)
     activation = await _get(db, event.id)
     if activation is None or activation.status != ActivationStatus.SUSPENDED:
@@ -373,6 +375,17 @@ async def resume(db: AsyncSession, event_id: UUID, admin: User) -> ActivationRes
         activation,
         "Paid sales resumed",
     )
+    owner = await _owner_of(db, event)
+    if owner:
+        notify(
+            db,
+            background,
+            [owner],
+            "paid_sales_resumed",
+            link=f"/events/{event.id}",
+            event_id=event.id,
+            event=event.title,
+        )
     await db.commit()
     return await _response(db, event, activation)
 

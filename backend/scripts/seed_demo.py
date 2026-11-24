@@ -5,8 +5,10 @@ For local development and demos only. Run inside the backend container:
     docker exec biletflow_copy_backend .venv/bin/python -m scripts.seed_demo
 
 It goes through the real API (same validation as the website), then marks the
-sample accounts as email-confirmed and opens paid sales on most events. Running
-it again does nothing once the sample organizers exist.
+sample accounts as email-confirmed and opens paid sales on most events, with
+the same activation record the checklist leaves. Running it again adds only
+what is missing, such as activation records for sample events opened before
+the seed wrote them.
 
 Sample accounts all use the password in DEMO_PASSWORD below (local test value):
   - attendee:  dana@demo.biletflow.kz
@@ -15,6 +17,7 @@ Sample accounts all use the password in DEMO_PASSWORD below (local test value):
 """
 
 import asyncio
+import secrets
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 from zoneinfo import ZoneInfo
@@ -24,7 +27,11 @@ from sqlalchemy import select, update
 
 from app.core.database import AsyncSessionLocal
 from app.main import app
+from app.modules.activation.enums import CURRENT_TERMS_VERSION, ActivationStatus
+from app.modules.activation.models import EventActivation
 from app.modules.events.models import Event
+from app.modules.organizers.models import OrganizerProfile
+from app.modules.platform.service import get_settings
 from app.modules.users.models import User
 
 API = "/api/v1"
@@ -289,6 +296,9 @@ async def main() -> None:
         if (await db.execute(select(User).where(User.email == first))).first():
             print("Sample organizers are already there.")
             await seed_seated_event()
+            added = await backfill_activations()
+            if added:
+                print(f"Added activation records for {added} sample events.")
             return
 
     transport = ASGITransport(app=app)
@@ -378,15 +388,74 @@ async def main() -> None:
                 paid_on.append(UUID(event_id))
             print(f"  {title} ({city}, {start:%d %b %H:%M})")
 
-    async with AsyncSessionLocal() as db:
-        await db.execute(
-            update(Event)
-            .where(Event.id.in_(paid_on))
-            .values(paid_sales_activated_at=datetime.now(UTC))
-        )
-        await db.commit()
+    await open_paid_sales(paid_on)
     print(f"Added {len(EVENTS)} events; paid sales open on {len(paid_on)}.")
     await seed_seated_event()
+
+
+async def open_paid_sales(event_ids: list[UUID]) -> None:
+    """Open paid sales with a completed activation record (SRS 4.5).
+
+    The record matches what the checklist leaves behind, so the admin's
+    activation list shows the sample events. The fee payment is simulated.
+    """
+    if not event_ids:
+        return
+    async with AsyncSessionLocal() as db:
+        fee = (await get_settings(db)).activation_fee_kzt
+        events = (
+            (await db.execute(select(Event).where(Event.id.in_(event_ids))))
+            .scalars()
+            .all()
+        )
+        now = datetime.now(UTC)
+        for event in events:
+            # A backfilled event keeps the time its sales were first opened
+            event.paid_sales_activated_at = event.paid_sales_activated_at or now
+            db.add(
+                EventActivation(
+                    event_id=event.id,
+                    organizer_profile_id=event.organizer_profile_id,
+                    status=ActivationStatus.ACTIVE,
+                    fee_kzt=fee,
+                    fee_paid_at=now,
+                    fee_payment_reference=f"SIM-{secrets.token_hex(8).upper()}",
+                    terms_version=CURRENT_TERMS_VERSION,
+                    terms_accepted_at=now,
+                    activated_at=event.paid_sales_activated_at,
+                )
+            )
+        await db.commit()
+
+
+async def backfill_activations() -> int:
+    """Add records for sample events whose paid sales were opened without one.
+
+    Only events of the sample organizers are touched.
+    """
+    async with AsyncSessionLocal() as db:
+        missing = (
+            (
+                await db.execute(
+                    select(Event.id)
+                    .join(
+                        OrganizerProfile,
+                        OrganizerProfile.id == Event.organizer_profile_id,
+                    )
+                    .join(User, User.id == OrganizerProfile.user_id)
+                    .outerjoin(EventActivation, EventActivation.event_id == Event.id)
+                    .where(
+                        User.email.in_([email for _, email, _ in ORGANIZERS.values()]),
+                        Event.paid_sales_activated_at.is_not(None),
+                        EventActivation.id.is_(None),
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+    await open_paid_sales(list(missing))
+    return len(missing)
 
 
 SEATED_TITLE = "Winter Gala: State Symphony Orchestra"
@@ -452,13 +521,7 @@ async def seed_seated_event() -> None:
         (
             await client.post(f"{API}/events/{event_id}/publish", headers=headers)
         ).raise_for_status()
-    async with AsyncSessionLocal() as db:
-        await db.execute(
-            update(Event)
-            .where(Event.id == UUID(event_id))
-            .values(paid_sales_activated_at=datetime.now(UTC))
-        )
-        await db.commit()
+    await open_paid_sales([UUID(event_id)])
     print(f"  {SEATED_TITLE} (numbered seats)")
 
 

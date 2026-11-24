@@ -24,8 +24,8 @@ class PlatformSettings(Base):
     support_email: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
-        default="support@biletflow.local",
-        server_default="support@biletflow.local",
+        default="support@example.com",
+        server_default="support@example.com",
     )
     # Platform-wide switch for new bookings (frontend admin console)
     bookings_enabled: Mapped[bool] = mapped_column(

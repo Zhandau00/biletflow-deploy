@@ -285,6 +285,8 @@ async def test_admin_suspension_stops_paid_sales_only(client: AsyncClient, sent_
     assert suspended.status_code == 200, suspended.text
     assert suspended.json()["status"] == "suspended"
     assert [m.to for m in sent_emails] == [owner.email]
+    assert "on hold" in sent_emails[0].body
+    sent_emails.clear()
 
     other = await create_account(client)
     blocked = await _order(client, other, event["id"], paid_type["id"])
@@ -298,10 +300,13 @@ async def test_admin_suspension_stops_paid_sales_only(client: AsyncClient, sent_
         await _order(client, other, event["id"], free_type["id"])
     ).status_code == 201
 
+    sent_emails.clear()
     resumed = await client.post(
         f"{API}/admin/events/{event['id']}/paid-sales/resume", headers=admin.headers
     )
     assert resumed.json()["status"] == "active"
+    assert [m.to for m in sent_emails] == [owner.email]
+    assert "no longer on hold" in sent_emails[0].body
     assert (
         await _order(client, other, event["id"], paid_type["id"])
     ).status_code == 201
@@ -379,3 +384,20 @@ async def test_bookings_switch_pauses_new_orders(client: AsyncClient):
     assert (
         await _order(client, buyer, event["id"], ticket_type["id"])
     ).status_code == 201
+
+
+async def test_settings_can_be_saved_back_unchanged(client: AsyncClient):
+    """The admin form sends back what it was given; the default must pass too."""
+    admin = await create_account(client, admin=True)
+    current = (await client.get(f"{API}/admin/settings", headers=admin.headers)).json()
+    saved = await client.patch(
+        f"{API}/admin/settings",
+        json={
+            "activation_fee_kzt": current["activation_fee_kzt"],
+            "support_email": current["support_email"],
+            "bookings_enabled": current["bookings_enabled"],
+        },
+        headers=admin.headers,
+    )
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["support_email"] == current["support_email"]

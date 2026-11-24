@@ -86,8 +86,14 @@ async def suspend_paid_sales(
 
 
 @router.post("/events/{event_id}/paid-sales/resume", response_model=ActivationResponse)
-async def resume_paid_sales(event_id: UUID, db: DatabaseSession, admin: PlatformAdmin):
-    return await activation_service.resume(db, event_id, admin)
+async def resume_paid_sales(
+    event_id: UUID,
+    db: DatabaseSession,
+    admin: PlatformAdmin,
+    background: BackgroundTasks,
+):
+    """Lift a suspension; the organizer is told that payouts are no longer held."""
+    return await activation_service.resume(db, event_id, admin, background)
 
 
 # --- Search and lists --------------------------------------------------------------
